@@ -58,3 +58,9 @@ v1 scope lives in [prd.md](prd.md). This file keeps everything consciously defer
 - **What:** apply for Alpha Vantage's unlimited tier for verified open-source/educational projects.
 - **Why deferred:** free tier is only 25 requests/day and the application process is undocumented (contact support@alphavantage.co).
 - **Notes from grilling:** could replace or back up Yahoo for US data.
+
+## AWS deployment via infrastructure as code
+
+- **What:** deploy the app to AWS with IaC (SST, CDK or Terraform): Next.js on Lambda (via SST/OpenNext), scheduled jobs as Lambdas triggered by EventBridge Scheduler, Neon kept as the database, and an AWS Budgets alarm at US$1.
+- **Why deferred:** the project is free-tier only. Since mid-2025 new AWS accounts get a credit-based free plan (about 6 months) instead of the old 12-month free tier, and RDS Postgres or an always-on Fargate worker would cost money after that. Vercel + Neon hosts the v1 demo for free, indefinitely.
+- **Notes from grilling:** the main value is AWS experience for the portfolio. The pg-boss worker from [ADR 0001](adr/0001-nextjs-monolith-with-worker.md) assumes a long-running process, so job entrypoints need to be callable from a Lambda handler; keep each job a plain function that the worker and a Lambda can both invoke. Using Neon instead of RDS avoids the biggest recurring cost.
