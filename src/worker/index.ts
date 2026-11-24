@@ -1,8 +1,8 @@
 // Entry point for `pnpm worker`: a plain Node process next to the Next.js app.
-import { databaseUrl } from "@/shared/db/url";
+import { serverEnv } from "@/shared/env";
 import { startWorker } from "./worker";
 
-const worker = await startWorker({ connectionString: databaseUrl() });
+const worker = await startWorker({ connectionString: serverEnv().databaseUrl });
 console.log("Worker started. Press Ctrl+C to stop.");
 
 let stopping = false;
