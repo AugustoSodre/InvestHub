@@ -25,7 +25,13 @@ describe("unhandled outbound requests", () => {
   });
 
   it("rejects a fetch that no handler matches", async () => {
-    await expect(fetch(realUrl)).rejects.toThrow();
+    const error = await fetch(realUrl).then(
+      () => undefined,
+      (e: unknown) => e,
+    );
+
+    expect(error).toBeInstanceOf(Error);
+    expect(String((error as Error).cause)).toMatch(/\[MSW\].*"error" strategy/);
     expect(hits).toBe(0);
   });
 
@@ -41,7 +47,7 @@ describe("unhandled outbound requests", () => {
       req.end();
     });
 
-    await expect(outcome).rejects.toThrow();
+    await expect(outcome).rejects.toThrow(/\[MSW\]/);
     expect(hits).toBe(0);
   });
 });
