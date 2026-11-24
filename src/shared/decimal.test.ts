@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Decimal, toDbNumeric, toDecimal } from "./decimal";
+import { Decimal, toChartNumber, toDbNumeric, toDecimal } from "./decimal";
 
 describe("decimal helpers", () => {
   it("adds without floating-point error", () => {
@@ -55,5 +55,10 @@ describe("decimal helpers", () => {
   it("exports a Decimal constructor that is configured for money", () => {
     expect(Decimal.precision).toBeGreaterThanOrEqual(40);
     expect(new Decimal("2").dividedBy(3).toSignificantDigits(5).toString()).toBe("0.66667");
+  });
+
+  it("converts a Decimal to a number for chart props only", () => {
+    expect(toChartNumber(new Decimal("1234.56"))).toBe(1234.56);
+    expect(toChartNumber(toDecimal("-0.5"))).toBe(-0.5);
   });
 });
