@@ -19,8 +19,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx --env-file-if-exists=.env src/shared/db/migrate-cli.ts",
-    "worker": "tsx --env-file-if-exists=.env src/worker/index.ts"
+    "db:migrate": "node --env-file-if-exists=.env --import tsx src/shared/db/migrate-cli.ts",
+    "worker": "node --env-file-if-exists=.env --import tsx src/worker/index.ts"
   },
   "dependencies": {
     "class-variance-authority": "0.7.1",
