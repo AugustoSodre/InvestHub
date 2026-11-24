@@ -9,7 +9,7 @@ TypeScript, Next.js (App Router), pg-boss worker, PostgreSQL, Drizzle, decimal.j
 ## Layout
 
 - `src/features/<module>/`: one feature module per domain concept: `accounts`, `catalog`, `ledger`, `valuation`, `fixed-income`, `performance`, `research`, `alerts`, `notifications`. Each holds its UI, server actions, domain logic, queries and tests. A slice (issue) adds behaviour to one or more modules; it never gets its own folder. See ADR 0007.
-- `src/integrations/<provider>/`: provider adapters (brapi, yahoo, finnhub, coingecko, cvm, tesouro, bcb, news, llm) with their fixtures.
+- `src/integrations/<provider>/`: provider adapters with their fixtures. Use exactly these folder names: `brapi`, `yahoo`, `finnhub`, `coingecko`, `cvm`, `tesouro-transparente`, `bcb`, `google-news`, `rss`, `llm/<provider>` (e.g. `llm/gemini`, `llm/ollama`), `telegram`. Add a new name here before creating a new folder.
 - `src/shared/`: db client, decimal helpers, business-day calendar.
 - `src/worker/`: job entrypoint and schedules. Every pg-boss schedule sets `tz: 'America/Sao_Paulo'`; without it, cron times run in UTC (07:00 BRT would fire at 04:00 BRT).
 - `src/app/`: thin routes only. Import from features; put no logic here.
@@ -23,7 +23,7 @@ Domain logic is plain TypeScript: functions that take a database handle as an ar
 - Never use JavaScript `number` for money, prices, quantities, rates or FX. Use `Decimal` from decimal.js.
 - One exception: chart data. Recharts only accepts numbers, so convert `Decimal` to `number` when building chart props, for display only. Never feed a converted value back into a calculation.
 - Store them as Postgres `numeric` (quantities `numeric(36,18)`). Wrap driver strings in `Decimal` at the boundary.
-- Keep cost basis in the asset's original currency. Convert to BRL only for display, using PTAX (previous business day on holidays).
+- Keep cost basis in the asset's original currency. In BRL views, convert each event's cost at the PTAX sell rate of its trade date and current value at the latest PTAX, so BRL P&L includes the FX effect. Store converted values only as derived data, never as truth. Previous business day on weekends and holidays.
 
 ## TDD
 

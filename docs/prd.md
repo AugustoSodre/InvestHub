@@ -48,14 +48,14 @@ Assets are added from a typed catalog by searching. The app resolves type and pr
 ### Money
 
 - Display currency: BRL (switchable to USD).
-- Cost basis is kept in the asset's original currency. FX applies at display time using PTAX, falling back to the previous business day.
+- Cost basis is kept in the asset's original currency. The BRL cost of each event uses the PTAX of its trade date; current market value uses the latest PTAX. BRL P&L therefore includes the FX effect, which a Brazilian investor actually gains or loses. PTAX falls back to the previous business day.
 - Postgres `numeric` and decimal.js. No floating-point money anywhere.
 
 ### Fixed income
 
 - Indexers: Pré (fixed % a.a.), Pós (% of CDI, or Selic), IPCA+ (spread + IPCA).
 - Accrual on 252 business days per year using the B3 holiday calendar. CDI and IPCA come from BCB SGS (series 12 and 433).
-- Show gross and estimated net value. Net applies the regressive income tax (22.5% up to 180 days, 20% up to 360, 17.5% up to 720, then 15%) and IOF within the first 30 days. LCI and LCA are exempt from income tax.
+- Show gross and estimated net value. Net applies the regressive income tax (22.5% up to 180 days, 20% up to 360, 17.5% up to 720, then 15%) and IOF within the first 30 days. LCI, LCA, CRI and CRA are exempt from income tax for individuals. Tesouro Direto is not exempt.
 - Tesouro Direto is valued at the daily market (sell) price, with the contracted rate shown next to it.
 
 ### Performance
@@ -116,7 +116,7 @@ Each slice is a vertical cut (UI, logic, database, tests) tracked as one GitHub 
 | S11 | Gross vs net value (IR, IOF, LCI/LCA exempt) | S10 |
 | S12 | B3 spreadsheet import | S04 |
 | S13 | Dividend and corporate-action suggestions, user confirms | S05 |
-| S14 | History chart, TWR, benchmarks (CDI, IBOV, S&P in BRL) | S06 |
+| S14 | History chart, TWR, benchmarks (CDI, IBOV, S&P in BRL) | S06, S10, S13 |
 | S15 | News ingestion and per-holding feed | S03 |
 | S16 | LLM provider interface and weekly digest | S14, S15 |
 | S17 | Alerts engine (price move, fato relevante, dividend), in-app | S05, S13, S15 |
@@ -125,3 +125,5 @@ Each slice is a vertical cut (UI, logic, database, tests) tracked as one GitHub 
 | S20 | README polish: architecture diagram, ADR index, screenshots | S19 |
 
 After S05, slices S07, S08, S09 and S10 are independent and can run in parallel. S15 can run alongside S12 and S13.
+
+S10 owns the BCB SGS adapter and the stored CDI and IPCA series; S14 reuses them for the CDI benchmark. S14 needs S13 for income received, and through S14 the digest (S16) gets fixed-income maturities (S10) and dividend dates (S13).

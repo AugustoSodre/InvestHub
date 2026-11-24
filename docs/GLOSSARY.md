@@ -10,7 +10,7 @@ Domain terms as used in this codebase. Brazilian market terms keep their Portugu
 
 **CNPJ**: Brazilian company/fund tax ID. The natural key for `INVESTMENT_FUND` assets (the fund class CNPJ in CVM data).
 
-**CDB / LCI / LCA / LC / CRI / CRA**: bank- or securitizer-issued credit products held to maturity. Valued by the fixed-income calculator, not by a market price. LCI and LCA are exempt from income tax for individuals.
+**CDB / LCI / LCA / LC / CRI / CRA**: bank- or securitizer-issued credit products held to maturity. Valued by the fixed-income calculator, not by a market price. LCI, LCA, CRI and CRA are exempt from income tax for individuals; CDB and LC are not.
 
 **Fato relevante**: a material-fact filing a listed company must publish (CVM). Triggers an alert. Detected best-effort from news; CVM IPE data confirms it later because it updates only weekly.
 
@@ -28,9 +28,9 @@ Domain terms as used in this codebase. Brazilian market terms keep their Portugu
 
 **Pré / Pós / IPCA+**: the three fixed-income indexers. Pré: fixed annual rate. Pós: percentage of CDI (or Selic). IPCA+: IPCA plus a fixed spread.
 
-**Preço médio** (average price): the weighted average acquisition cost of a position, including fees, in the asset's original currency. Buys change it; sells do not.
+**Preço médio** (average price): the weighted average acquisition cost of a position, including fees, in the asset's original currency. Buys change it; sells do not. Splits and reverse splits rescale it (total cost unchanged, quantity changes). Bonus shares (bonificação) add the cost per share the company assigns, so the total cost and the average both change.
 
-**PTAX**: the official USD/BRL rate published daily by Banco Central. Used to convert USD values to BRL. No rate on weekends or holidays, so use the previous business day.
+**PTAX**: the official USD/BRL rate published daily by Banco Central. Used to convert USD values to BRL, with the sell rate (`cotacaoVenda`). Each event's BRL cost uses the PTAX of its trade date; current market value uses the latest PTAX, so BRL P&L includes the FX effect. No rate on weekends or holidays, so use the previous business day.
 
 **Selic**: Brazil's policy interest rate. Indexer for Tesouro Selic.
 
