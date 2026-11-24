@@ -10,7 +10,8 @@ TypeScript, Next.js (App Router), pg-boss worker, PostgreSQL, Drizzle, decimal.j
 
 - `src/features/<module>/`: one feature module per domain concept: `accounts`, `catalog`, `ledger`, `valuation`, `fixed-income`, `performance`, `research`, `alerts`, `notifications`. Each holds its UI, server actions, domain logic, queries and tests. A slice (issue) adds behaviour to one or more modules; it never gets its own folder. See ADR 0007.
 - `src/integrations/<provider>/`: provider adapters with their fixtures. Use exactly these folder names: `brapi`, `yahoo`, `finnhub`, `coingecko`, `cvm`, `tesouro-transparente`, `bcb`, `google-news`, `rss`, `llm/<provider>` (e.g. `llm/gemini`, `llm/ollama`), `telegram`. Add a new name here before creating a new folder.
-- `src/shared/`: db client, decimal helpers, business-day calendar.
+- `src/shared/`: db client and migrations (`db/`), decimal helpers (`decimal.ts`), i18n config and PT-BR messages (`i18n/`), shadcn/ui components (`ui/`), business-day calendar.
+- `test/`: cross-cutting test harness (Vitest setup, per-file database, MSW server, fixtures). `e2e/`: Playwright specs. Module tests live next to their code.
 - `src/worker/`: job entrypoint and schedules. Every pg-boss schedule sets `tz: 'America/Sao_Paulo'`; without it, cron times run in UTC (07:00 BRT would fire at 04:00 BRT).
 - `src/app/`: thin routes only. Import from features; put no logic here.
 
@@ -70,4 +71,16 @@ Independent slices (see the dependency table in `docs/prd.md`) may run in parall
 
 ## Commands
 
-TBD in S00 (walking skeleton). Update this section when the scripts exist.
+Node 22 (`.nvmrc`), pnpm through corepack (`corepack enable`). Docker must be running for the database and for integration tests.
+
+- `docker compose up -d`: local Postgres on `127.0.0.1:55432` (the default when `DATABASE_URL` is unset).
+- `pnpm db:migrate`: apply Drizzle migrations. `pnpm db:generate` creates a migration from `src/shared/db/schema.ts`.
+- `pnpm dev`: Next.js on http://localhost:3000, bound to 127.0.0.1. `pnpm build` / `pnpm start` for production.
+- `pnpm worker`: pg-boss worker (`src/worker/index.ts`). Create schedules only through `schedule()` in `src/worker/schedule.ts`, which sets the São Paulo time zone.
+- `pnpm lint`, `pnpm typecheck`, `pnpm format` (`pnpm format:check` in CI).
+- `pnpm test`: Vitest. Project `unit` runs `*.test.ts`; project `integration` runs `*.int.test.ts` against Testcontainers Postgres. Filter with `pnpm test --project unit` or a path.
+- `pnpm test:e2e`: Playwright (`e2e/`). Starts `pnpm dev` itself, or reuses a running one. First run needs `pnpm exec playwright install chromium`.
+
+Test helpers: in an `*.int.test.ts` file, `testDb()` and `testDatabaseUrl()` from `test/db.ts` give that file's own database. `server` from `test/msw/server.ts` is the shared MSW server; register fixtures with `server.use(...)`. Any request without a handler errors (MSW 3 calls the option `onUnhandledFrame`).
+
+Next.js 16 differs from older versions: read the bundled docs in `node_modules/next/dist/docs/` before using a Next API (see `AGENTS.md`, which `next dev` maintains).
