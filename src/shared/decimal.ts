@@ -13,6 +13,9 @@ export const Decimal = DecimalJs.clone({
 });
 export type Decimal = InstanceType<typeof Decimal>;
 
+/** Optional sign, digits with an optional fraction, optional exponent. */
+const PLAIN_DECIMAL = /^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i;
+
 /**
  * Wraps a string from the database driver, a form or a provider in a Decimal.
  * Takes strings only, so a float can't sneak in. Throws on anything that is
@@ -20,13 +23,10 @@ export type Decimal = InstanceType<typeof Decimal>;
  */
 export function toDecimal(raw: string): Decimal {
   const trimmed = raw.trim();
-  let value: Decimal | undefined;
-  try {
-    value = trimmed === "" ? undefined : new Decimal(trimmed);
-  } catch {
-    value = undefined;
-  }
-  if (!value || !value.isFinite()) {
+  // decimal.js also parses hex, binary, octal, NaN and Infinity; money values never use them.
+  const value = PLAIN_DECIMAL.test(trimmed) ? new Decimal(trimmed) : undefined;
+  // isFinite catches exponents beyond decimal.js's range, which overflow to Infinity.
+  if (!value?.isFinite()) {
     throw new Error(`Invalid decimal: ${JSON.stringify(raw)}`);
   }
   return value;

@@ -21,12 +21,31 @@ describe("decimal helpers", () => {
     expect(toDecimal(" -12.50 ").toString()).toBe("-12.5");
   });
 
-  it.each(["", "abc", "1,5", "NaN", "Infinity", "-Infinity"])(
-    "rejects %j at the boundary",
-    (raw) => {
-      expect(() => toDecimal(raw)).toThrow(/invalid decimal/i);
-    },
-  );
+  it.each([
+    "",
+    "abc",
+    "1,5",
+    "NaN",
+    "Infinity",
+    "-Infinity",
+    "0x10",
+    "0b101",
+    "0o17",
+    "1.2.3",
+    "1e99999999999999999",
+  ])("rejects %j at the boundary", (raw) => {
+    expect(() => toDecimal(raw)).toThrow(/invalid decimal/i);
+  });
+
+  it.each([
+    ["+1.5", "1.5"],
+    [".5", "0.5"],
+    ["5.", "5"],
+    ["1.5e3", "1500"],
+    ["2E-2", "0.02"],
+  ])("accepts plain decimal notation %j", (raw, expected) => {
+    expect(toDecimal(raw).toString()).toBe(expected);
+  });
 
   it("never writes exponent notation to the database", () => {
     expect(toDbNumeric(toDecimal("0.000000000000000001"))).toBe("0.000000000000000001");
