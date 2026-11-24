@@ -47,6 +47,12 @@ v1 scope lives in [prd.md](prd.md). This file keeps everything consciously defer
 - **What:** alerts and digest by email.
 - **Why deferred:** in-app plus Telegram covers v1 with less setup.
 
+## Selic-indexed bank products
+
+- **What:** let the fixed-income calculator accrue Pós products at a % of Selic.
+- **Why deferred:** bank products indexed to Selic are rare; CDB, LCI, LCA, CRI and CRA almost always track CDI, and Tesouro Selic is valued at market price.
+- **Notes:** small change: add BCB SGS series 11 to the SGS client that S10 owns.
+
 ## Alpha Vantage open-source tier
 
 - **What:** apply for Alpha Vantage's unlimited tier for verified open-source/educational projects.

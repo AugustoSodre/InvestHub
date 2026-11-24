@@ -26,7 +26,7 @@ Domain terms as used in this codebase. Brazilian market terms keep their Portugu
 
 **JCP** (Juros sobre Capital Próprio): a Brazilian form of shareholder payout, similar to a dividend but taxed at source. A ledger event type of its own.
 
-**Pré / Pós / IPCA+**: the three fixed-income indexers. Pré: fixed annual rate. Pós: percentage of CDI (or Selic). IPCA+: IPCA plus a fixed spread.
+**Pré / Pós / IPCA+**: the three fixed-income indexers. Pré: fixed annual rate. Pós: percentage of CDI (or Selic; the v1 calculator supports CDI only). IPCA+: IPCA plus a fixed spread.
 
 **Preço médio** (average price): the weighted average acquisition cost of a position, including fees, in the asset's original currency. Buys change it; sells do not. Splits and reverse splits rescale it (total cost unchanged, quantity changes). Bonus shares (bonificação) add the cost per share the company assigns, so the total cost and the average both change.
 

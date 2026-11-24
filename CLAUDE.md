@@ -36,7 +36,7 @@ Domain logic is plain TypeScript: functions that take a database handle as an ar
 
 ## Hard rules
 
-- LLM prompts never contain quantities, prices paid, monetary amounts or account names. Only tickers, percentages, weights, dates and news. Build prompts only in the LLM prompt builder.
+- LLM prompts never contain quantities, prices paid, monetary amounts, account names or any user-typed text (names, notes, labels). Only tickers, catalog asset names, percentages, weights, dates and news. Fixed-income holdings get a label generated from stored fields (issuer, indexer, rate, maturity). Build prompts only in the LLM prompt builder.
 - API keys are read server-side only. Never expose them to client components or `NEXT_PUBLIC_*`.
 - When `DEMO_MODE=true`, block every write and serve seeded data. No live third-party feeds in demo mode.
 - Show "as of" dates on prices and CoinGecko attribution wherever crypto prices appear.

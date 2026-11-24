@@ -53,7 +53,7 @@ Assets are added from a typed catalog by searching. The app resolves type and pr
 
 ### Fixed income
 
-- Indexers: Pré (fixed % a.a.), Pós (% of CDI, or Selic), IPCA+ (spread + IPCA).
+- Indexers: Pré (fixed % a.a.), Pós (% of CDI), IPCA+ (spread + IPCA). Selic-indexed bank products are out of v1; Tesouro Selic is valued at market price (S09), not by the calculator.
 - Accrual on 252 business days per year using the B3 holiday calendar. CDI and IPCA come from BCB SGS (series 12 and 433).
 - Show gross and estimated net value. Net applies the regressive income tax (22.5% up to 180 days, 20% up to 360, 17.5% up to 720, then 15%) and IOF within the first 30 days. LCI, LCA, CRI and CRA are exempt from income tax for individuals. Tesouro Direto is not exempt.
 - Tesouro Direto is valued at the daily market (sell) price, with the contracted rate shown next to it.
@@ -80,7 +80,7 @@ Assets are added from a typed catalog by searching. The app resolves type and pr
   - dividend or JCP announcement.
 - Delivery: in-app and Telegram.
 - Retrieval is structured SQL (by ticker and date range). No vector RAG in v1 ([ADR 0003](adr/0003-no-vector-rag-in-v1.md)).
-- The LLM never receives quantities or monetary amounts, only tickers, percentages, weights and news ([ADR 0005](adr/0005-llm-privacy-no-amounts.md)).
+- The LLM never receives quantities, monetary amounts or user-typed text, only tickers, catalog names, percentages, weights, dates and news ([ADR 0005](adr/0005-llm-privacy-no-amounts.md)).
 
 ### Providers
 
