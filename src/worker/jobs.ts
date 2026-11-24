@@ -3,7 +3,7 @@ import type { PgBoss, WorkHandler } from "pg-boss";
 /** Placeholder job proving the worker wiring. Real jobs call feature-module domain functions. */
 export const NOOP_JOB = "noop";
 
-type JobDefinition = {
+export type JobDefinition = {
   name: string;
   handler: WorkHandler<unknown>;
 };
@@ -16,7 +16,7 @@ export const jobs: JobDefinition[] = [
 ];
 
 /** Creates each job's queue and attaches its handler. Returns the registered job names. */
-export async function registerJobs(boss: PgBoss): Promise<string[]> {
+export async function registerJobs(boss: PgBoss, jobs: JobDefinition[]): Promise<string[]> {
   for (const job of jobs) {
     await boss.createQueue(job.name);
     await boss.work(job.name, job.handler);

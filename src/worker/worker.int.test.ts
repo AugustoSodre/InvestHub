@@ -1,4 +1,5 @@
 import { setTimeout as sleep } from "node:timers/promises";
+import { Client } from "pg";
 import { afterEach, describe, expect, it } from "vitest";
 import { testDatabaseUrl } from "../../test/db";
 import { NOOP_JOB } from "./jobs";
@@ -38,6 +39,16 @@ describe("worker", () => {
     expect(state).toBe("completed");
   });
 
+  it("closes its connections when registering a job fails", async () => {
+    const failingJob = { name: "not a valid queue name!", handler: async () => {} };
+
+    await expect(
+      startWorker({ connectionString: testDatabaseUrl(), log: () => {}, jobs: [failingJob] }),
+    ).rejects.toThrow();
+
+    expect(await otherConnectionCount()).toBe(0);
+  });
+
   it("schedules cron jobs in Brasília time", async () => {
     worker = await startWorker({ connectionString: testDatabaseUrl(), log: () => {} });
 
@@ -51,3 +62,17 @@ describe("worker", () => {
     await worker.boss.unschedule(NOOP_JOB);
   });
 });
+
+/** Connections to this file's database other than the one asking. */
+async function otherConnectionCount(): Promise<number> {
+  const client = new Client({ connectionString: testDatabaseUrl() });
+  await client.connect();
+  try {
+    const { rows } = await client.query<{ count: string }>(
+      "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid()",
+    );
+    return Number(rows[0]!.count);
+  } finally {
+    await client.end();
+  }
+}
