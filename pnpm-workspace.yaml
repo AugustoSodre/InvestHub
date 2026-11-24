@@ -1,0 +1,9 @@
+# Dependency build scripts are denied unless listed as true. Everything below works
+# from prebuilt optional binaries, so none of them needs its install script.
+allowBuilds:
+  "@parcel/watcher": false # next-intl message extractor (unused)
+  "@swc/core": false # next-intl message extractor (unused)
+  cpu-features: false # optional ssh2 speedup (testcontainers)
+  esbuild: false # binary ships as an optional dependency
+  protobufjs: false # testcontainers telemetry types
+  ssh2: false # remote Docker over SSH (unused)
