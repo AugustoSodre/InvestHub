@@ -5,20 +5,43 @@ import prettier from "eslint-config-prettier/flat";
 
 const CODE_FILES = "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}";
 
-const NEXT_FREE_MESSAGE =
-  "Domain code in src/features must stay Next-free (ADR 0007). Only actions.ts and .tsx UI files may import next/*, next-intl/server, server-only or client-only.";
+// The one list of modules feature domain code may not import (ADR 0007). A
+// trailing "/*" also blocks every subpath, at any depth.
+const NEXT_ONLY_MODULES = ["next", "next/*", "next-intl/server", "server-only", "client-only"];
 
-// pg-boss evaluates cron in UTC unless `tz` is set; schedule() always sets it.
-const DIRECT_SCHEDULE = {
-  selector: "CallExpression[callee.type='MemberExpression'][callee.property.name='schedule']",
-  message:
-    "Create schedules with schedule() from src/worker/schedule.ts, which sets tz: 'America/Sao_Paulo'.",
+const NEXT_FREE_MESSAGE = `Domain code in src/features must stay Next-free (ADR 0007). Only actions.ts and .tsx UI files may import ${NEXT_ONLY_MODULES.join(", ")}.`;
+
+const STATIC_NEXT_IMPORTS = {
+  paths: NEXT_ONLY_MODULES.filter((name) => !name.endsWith("/*")).map((name) => ({
+    name,
+    message: NEXT_FREE_MESSAGE,
+  })),
+  patterns: [
+    { group: NEXT_ONLY_MODULES.filter((name) => name.endsWith("/*")), message: NEXT_FREE_MESSAGE },
+  ],
 };
 
+// esquery regexes can't contain a literal "/", so it is written as /.
+const moduleRegex = (name) =>
+  name
+    .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
+    .replace(/\/\*$/, "/.+")
+    .replaceAll("/", "\\u002F");
+
 const DYNAMIC_NEXT_IMPORT = {
-  selector:
-    "ImportExpression[source.value=/^(next(\\u002F.*)?|server-only|client-only|next-intl\\u002Fserver)$/]",
+  selector: `ImportExpression[source.value=/^(${NEXT_ONLY_MODULES.map(moduleRegex).join("|")})$/]`,
   message: NEXT_FREE_MESSAGE,
+};
+
+// pg-boss evaluates cron in UTC unless `tz` is set; schedule() always sets it.
+// Lint has no types, so this matches by name: `.schedule(` on a receiver named
+// *boss (boss, pgBoss, worker.boss, this.boss). Keep pg-boss instances named
+// that way; `bond.schedule()` and other domain methods stay allowed.
+const DIRECT_SCHEDULE = {
+  selector:
+    "CallExpression[callee.type='MemberExpression'][callee.property.name='schedule']:matches([callee.object.name=/boss$/i], [callee.object.property.name=/boss$/i])",
+  message:
+    "Create schedules with schedule() from src/worker/schedule.ts, which sets tz: 'America/Sao_Paulo'.",
 };
 
 const eslintConfig = defineConfig([
@@ -38,18 +61,7 @@ const eslintConfig = defineConfig([
     files: ["src/features/**/*.{ts,mts,cts,js,mjs,cjs,jsx}"],
     ignores: ["src/features/**/actions.ts"],
     rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          paths: [
-            { name: "next", message: NEXT_FREE_MESSAGE },
-            { name: "next-intl/server", message: NEXT_FREE_MESSAGE },
-            { name: "server-only", message: NEXT_FREE_MESSAGE },
-            { name: "client-only", message: NEXT_FREE_MESSAGE },
-          ],
-          patterns: [{ group: ["next/*"], message: NEXT_FREE_MESSAGE }],
-        },
-      ],
+      "no-restricted-imports": ["error", STATIC_NEXT_IMPORTS],
       // Flat config replaces a rule's options per file, so repeat DIRECT_SCHEDULE here.
       "no-restricted-syntax": ["error", DIRECT_SCHEDULE, DYNAMIC_NEXT_IMPORT],
     },

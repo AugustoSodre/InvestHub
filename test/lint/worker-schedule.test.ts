@@ -25,6 +25,23 @@ describe("schedules go through schedule()", () => {
     },
   );
 
+  it.each([
+    'export const run = (boss: any) => boss.schedule("job", "0 7 * * *");\n',
+    'export const run = (pgBoss: any) => pgBoss.schedule("job", "0 7 * * *");\n',
+    'export const run = (worker: any) => worker.boss.schedule("job", "0 7 * * *");\n',
+    'export class Jobs {\n  boss: any;\n  run() {\n    return this.boss.schedule("job", "0 7 * * *");\n  }\n}\n',
+  ])("flags a direct pg-boss schedule call: %s", async (code) => {
+    expect(await scheduleErrors("src/worker/jobs.ts", code)).toHaveLength(1);
+  });
+
+  it("allows .schedule( on objects that are not pg-boss, such as a bond", async () => {
+    const errors = await scheduleErrors(
+      "src/features/fixed-income/coupons.ts",
+      "export const coupons = (bond: any) => bond.schedule();\n",
+    );
+    expect(errors).toHaveLength(0);
+  });
+
   it("allows the call inside src/worker/schedule.ts", async () => {
     expect(await scheduleErrors("src/worker/schedule.ts", DIRECT_SCHEDULE)).toHaveLength(0);
   });

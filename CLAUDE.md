@@ -76,7 +76,7 @@ Node 22 (`.nvmrc`), pnpm through corepack (`corepack enable`). Docker must be ru
 - `docker compose up -d --wait`: local Postgres on `127.0.0.1:55432` (the default when `DATABASE_URL` is unset, except with `NODE_ENV=production`, where a missing `DATABASE_URL` throws). `--wait` returns once it is healthy.
 - `pnpm db:migrate`: apply Drizzle migrations. Retries for up to 30s while Postgres is still starting. `pnpm db:generate` creates a migration from `src/shared/db/schema.ts`.
 - `pnpm dev`: Next.js on http://localhost:3000, bound to 127.0.0.1. `pnpm build` / `pnpm start` for production.
-- `pnpm worker`: pg-boss worker (`src/worker/index.ts`). Create schedules only through `schedule()` in `src/worker/schedule.ts`, which sets the São Paulo time zone.
+- `pnpm worker`: pg-boss worker (`src/worker/index.ts`). Create schedules only through `schedule()` in `src/worker/schedule.ts`, which sets the São Paulo time zone. Name pg-boss instances `boss` (or `*boss`): the lint rule that blocks direct `.schedule(` calls matches by that name.
 - `pnpm lint`, `pnpm typecheck`, `pnpm format` (`pnpm format:check` in CI).
 - `pnpm test`: Vitest. Project `unit` runs `*.test.ts`; project `integration` runs `*.int.test.ts` against Testcontainers Postgres. Filter with `pnpm test --project unit` or a path.
 - `pnpm test:e2e`: Playwright (`e2e/`). Starts `pnpm dev` itself, or reuses a running one. First run needs `pnpm exec playwright install chromium`.

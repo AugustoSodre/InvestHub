@@ -57,6 +57,22 @@ describe("Next-free feature modules", () => {
     },
   );
 
+  it("blocks nested next/* paths, statically and dynamically", async () => {
+    const errors = await nextFreeErrors(
+      "src/features/ledger/fonts.ts",
+      'import { Inter } from "next/font/google";\nexport const f = Inter;\nexport const load = () => import("next/font/google");\n',
+    );
+    expect(errors).toHaveLength(2);
+  });
+
+  it("does not block packages that only start with next, such as next-auth", async () => {
+    const errors = await nextFreeErrors(
+      "src/features/accounts/session.ts",
+      'import NextAuth from "next-auth";\nexport const a = NextAuth;\nexport const load = () => import("next-auth");\n',
+    );
+    expect(errors).toHaveLength(0);
+  });
+
   it("allows next/cache, statically and dynamically, in actions.ts", async () => {
     const errors = await nextFreeErrors(
       "src/features/ledger/actions.ts",
