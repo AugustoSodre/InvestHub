@@ -1,0 +1,21 @@
+services:
+  db:
+    # Keep in sync with POSTGRES_IMAGE in test/setup/postgres-global.ts.
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: investhub
+      POSTGRES_PASSWORD: investhub
+      POSTGRES_DB: investhub
+    ports:
+      # Localhost only. 55432 avoids clashing with a Postgres already on 5432.
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U investhub -d investhub"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+volumes:
+  pgdata:

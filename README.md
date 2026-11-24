@@ -2,7 +2,7 @@
 
 A personal investment hub for a Brazilian investor: one ledger for B3 stocks, FIIs, US stocks and ETFs, crypto, investment funds, Tesouro Direto and bank fixed income, valued daily in BRL, with news, a weekly AI digest and alerts about what you hold.
 
-> **Status: spec phase.** Requirements and decisions are written; implementation starts with slice S00.
+> **Status: early development.** The walking skeleton (S00) is in place; feature slices come next.
 
 ## Planned features (v1)
 
@@ -33,9 +33,15 @@ TypeScript · Next.js · pg-boss worker · PostgreSQL · Drizzle · decimal.js �
 - [Roadmap (v2 and later)](docs/roadmap.md)
 - [Agent guide](CLAUDE.md)
 
-## Local development
+## Getting started
 
-Coming in S00 (walking skeleton). Copy `.env.example` to `.env` and fill in your own free API keys.
+Needs Node 22 and Docker.
+
+```bash
+corepack enable && pnpm install && docker compose up -d --wait && pnpm db:migrate && pnpm dev
+```
+
+Open http://localhost:3000. Run the background worker with `pnpm worker`. To add your own free API keys, copy `.env.example` to `.env` and fill it in. See the Commands section of [CLAUDE.md](CLAUDE.md) for tests and other scripts.
 
 ## License
 

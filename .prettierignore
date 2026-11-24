@@ -1,0 +1,4 @@
+pnpm-lock.yaml
+src/shared/db/migrations/meta/
+# Spec docs are hand-formatted; keep them out of automatic rewrites.
+docs/

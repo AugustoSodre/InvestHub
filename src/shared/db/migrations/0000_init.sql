@@ -1,0 +1,2 @@
+-- Initial migration, intentionally empty (S00 walking skeleton).
+-- It proves the migration pipeline end to end; domain tables arrive with their slices.
