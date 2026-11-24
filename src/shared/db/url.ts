@@ -1,12 +1,13 @@
 /**
- * Matches the `db` service in compose.yaml, so a fresh clone works without a
- * `.env`. Set DATABASE_URL to point anywhere else.
+ * Matches the `investhub_dev` database that compose.yaml creates, so a fresh
+ * clone works without a `.env` and never touches real data by accident. Point
+ * DATABASE_URL at the `investhub` database for real use.
  */
-export const LOCAL_DATABASE_URL = "postgres://investhub:investhub@127.0.0.1:55432/investhub";
+export const LOCAL_DATABASE_URL = "postgres://investhub:investhub@127.0.0.1:55432/investhub_dev";
 
 /**
  * Outside production, a missing DATABASE_URL falls back to the local compose
- * database. In production it throws, so a deploy that forgot the variable
+ * dev database. In production it throws, so a deploy that forgot the variable
  * fails at startup instead of quietly connecting to localhost. Run the worker
  * and migrations with NODE_ENV=production in deployed environments.
  */

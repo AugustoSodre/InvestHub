@@ -7,6 +7,10 @@ describe("databaseUrl", () => {
     expect(databaseUrl({ DATABASE_URL: url, NODE_ENV: "production" })).toBe(url);
   });
 
+  it("falls back to the compose dev database, never the real-data one", () => {
+    expect(new URL(LOCAL_DATABASE_URL).pathname).toBe("/investhub_dev");
+  });
+
   it("falls back to the local compose database outside production", () => {
     expect(databaseUrl({})).toBe(LOCAL_DATABASE_URL);
     expect(databaseUrl({ NODE_ENV: "development" })).toBe(LOCAL_DATABASE_URL);
