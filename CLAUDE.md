@@ -87,4 +87,4 @@ Next.js 16 differs from older versions: read the bundled docs in `node_modules/n
 
 ## Verification
 
-`.claude/settings.json` runs `.claude/hooks/verify.sh` on `Stop` and `SubagentStop`. With uncommitted changes it runs `pnpm lint && pnpm typecheck && pnpm test:unit` and blocks (exit 2, last 80 lines fed back) until they pass; a clean tree skips it. After 3 consecutive blocks it lets the stop through with a warning. Emergency bypass: disable it in `/hooks`. CI also runs the integration tests, gitleaks and CodeQL.
+`.claude/settings.json` runs `.claude/hooks/verify.sh` on `Stop` and `SubagentStop`. When there are uncommitted changes or commits not yet on main (`origin/main`, else `main`), it runs `pnpm lint && pnpm typecheck && pnpm test:unit` and blocks (exit 2, last 80 lines fed back) until they pass; a clean tree with nothing ahead of main skips it. After 3 consecutive blocks it lets the stop through with a warning. Emergency bypass: disable it in `/hooks`. CI also runs the integration tests, gitleaks and CodeQL.

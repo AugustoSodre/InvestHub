@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Stop / SubagentStop hook (.claude/settings.json): blocks "done" until lint,
-# typecheck and the Docker-free unit tests pass. Exit 2 sends stderr back to
+# Stop / SubagentStop hook (.claude/settings.json). When there are uncommitted
+# changes or commits not yet on main, it blocks "done" until lint, typecheck
+# and the Docker-free unit tests pass. Exit 2 sends stderr back to
 # the agent so it keeps working. Emergency bypass: disable it in /hooks.
 set -uo pipefail
 
@@ -21,8 +22,23 @@ cwd="$(sed -nE 's/.*"cwd"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/p' <<<"$input" 
 repo="$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null)" || exit 0
 cd "$repo" || exit 0
 
-# Nothing changed (a chat-only turn): nothing to verify.
-[ -z "$(git status --porcelain)" ] && exit 0
+# Commits on HEAD that main does not have yet. Implementers commit before they
+# stop, so a clean tree alone does not mean there is nothing to verify.
+commits_ahead() {
+  local base
+  for base in origin/main main; do
+    if git rev-parse --verify --quiet "$base^{commit}" >/dev/null; then
+      git rev-list --count "$base..HEAD" 2>/dev/null || echo 0
+      return
+    fi
+  done
+  echo 0
+}
+
+# No uncommitted changes and nothing ahead of main (a chat-only turn): skip.
+if [ -z "$(git status --porcelain)" ] && [ "$(commits_ahead)" -eq 0 ]; then
+  exit 0
+fi
 
 # Consecutive-block counter. The git dir is per worktree, so agents in separate
 # worktrees keep separate counts, and the file stays out of the working tree.

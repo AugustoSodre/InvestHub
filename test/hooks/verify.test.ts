@@ -39,8 +39,14 @@ beforeEach(() => {
   chmodSync(path.join(bin, "pnpm"), 0o755);
   writeFileSync(log, "");
 
-  git("init", "-q");
+  git("init", "-q", "-b", "main");
   writeFileSync(path.join(repo, "money.ts"), "export const x = 1;\n");
+  commitAll("init");
+});
+
+afterEach(() => rmSync(root, { recursive: true, force: true }));
+
+function commitAll(message: string) {
   git("add", ".");
   git(
     "-c",
@@ -51,11 +57,16 @@ beforeEach(() => {
     "commit.gpgsign=false",
     "commit",
     "-qm",
-    "init",
+    message,
   );
-});
+}
 
-afterEach(() => rmSync(root, { recursive: true, force: true }));
+/** A feature branch with one committed change and a clean working tree. */
+function commitOnBranch() {
+  git("switch", "-q", "-c", "feat/1-money");
+  dirty();
+  commitAll("feat: money");
+}
 
 function dirty() {
   writeFileSync(path.join(repo, "money.ts"), 'export const x: number = "1";\n');
@@ -79,9 +90,31 @@ function runHook(stopHookActive: boolean, fail?: "lint" | "typecheck" | "test:un
 const ranScripts = () => readFileSync(log, "utf8").split("\n").filter(Boolean);
 
 describe("verify hook", () => {
-  it("exits 0 on a clean tree without running any check", () => {
+  it("exits 0 on a clean tree at main without running any check", () => {
     const result = runHook(false, "typecheck");
     expect(result.status).toBe(0);
+    expect(ranScripts()).toEqual([]);
+  });
+
+  it("exits 0 on a clean branch with no commits beyond main", () => {
+    git("switch", "-q", "-c", "feat/1-money");
+    expect(runHook(false, "typecheck").status).toBe(0);
+    expect(ranScripts()).toEqual([]);
+  });
+
+  it("checks commits not yet on main even when the tree is clean", () => {
+    commitOnBranch();
+    const result = runHook(false, "typecheck");
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("error TS2322");
+    expect(ranScripts()).toEqual(["lint", "typecheck"]);
+  });
+
+  it("measures commits against origin/main when it exists", () => {
+    commitOnBranch();
+    // The remote already has the branch's work; local main is stale.
+    git("update-ref", "refs/remotes/origin/main", "HEAD");
+    expect(runHook(false, "typecheck").status).toBe(0);
     expect(ranScripts()).toEqual([]);
   });
 
