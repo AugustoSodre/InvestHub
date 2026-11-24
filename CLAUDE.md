@@ -73,8 +73,8 @@ Independent slices (see the dependency table in `docs/prd.md`) may run in parall
 
 Node 22 (`.nvmrc`), pnpm through corepack (`corepack enable`). Docker must be running for the database and for integration tests.
 
-- `docker compose up -d`: local Postgres on `127.0.0.1:55432` (the default when `DATABASE_URL` is unset).
-- `pnpm db:migrate`: apply Drizzle migrations. `pnpm db:generate` creates a migration from `src/shared/db/schema.ts`.
+- `docker compose up -d --wait`: local Postgres on `127.0.0.1:55432` (the default when `DATABASE_URL` is unset). `--wait` returns once it is healthy.
+- `pnpm db:migrate`: apply Drizzle migrations. Retries for up to 30s while Postgres is still starting. `pnpm db:generate` creates a migration from `src/shared/db/schema.ts`.
 - `pnpm dev`: Next.js on http://localhost:3000, bound to 127.0.0.1. `pnpm build` / `pnpm start` for production.
 - `pnpm worker`: pg-boss worker (`src/worker/index.ts`). Create schedules only through `schedule()` in `src/worker/schedule.ts`, which sets the São Paulo time zone.
 - `pnpm lint`, `pnpm typecheck`, `pnpm format` (`pnpm format:check` in CI).

@@ -38,7 +38,7 @@ TypeScript · Next.js · pg-boss worker · PostgreSQL · Drizzle · decimal.js �
 Needs Node 22 and Docker.
 
 ```bash
-corepack enable && pnpm install && docker compose up -d && pnpm db:migrate && pnpm dev
+corepack enable && pnpm install && docker compose up -d --wait && pnpm db:migrate && pnpm dev
 ```
 
 Open http://localhost:3000. Run the background worker with `pnpm worker`. To add your own free API keys, copy `.env.example` to `.env` and fill it in. See the Commands section of [CLAUDE.md](CLAUDE.md) for tests and other scripts.
