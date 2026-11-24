@@ -60,11 +60,13 @@ Domain logic is plain TypeScript: functions that take a database handle as an ar
 
 ## Agent workflow per issue
 
+The main session orchestrates every step. Subagents cannot spawn subagents, so only the main session dispatches agents.
+
 1. An implementer subagent works in its own git worktree, red-green-refactor against the issue's acceptance criteria.
-2. A reviewer subagent checks the diff against the issue spec and this guide.
+2. Review the diff against the issue spec and this guide. Either the main session runs the `code-review` skill (it fans out to parallel Standards and Spec reviewers, which only works from the main session), or a single reviewer subagent does one combined pass.
 3. Open the PR; the human merges.
 
-Independent slices (see the dependency table in `docs/prd.md`) may run in parallel worktrees.
+Independent slices (see the dependency table in `docs/prd.md`) may run in parallel worktrees, each with its own implementer dispatched by the main session.
 
 ## Commands
 
