@@ -90,6 +90,7 @@ All free tier, each behind an adapter with recorded fixtures. Details and terms 
 
 - Real use: local, `docker compose up`. The app only listens on localhost.
 - Public demo: Vercel with `DEMO_MODE=true`, which serves seeded fake data and blocks all writes. No live third-party feeds in the demo (terms of use).
+- The demo reads from a hosted free-tier Postgres (e.g. Neon or Supabase), filled by a seed script. The worker is not deployed, so no provider adapter ever runs in the demo.
 
 ## Non-goals (v1)
 
@@ -120,7 +121,7 @@ Each slice is a vertical cut (UI, logic, database, tests) tracked as one GitHub 
 | S16 | LLM provider interface and weekly digest | S14, S15 |
 | S17 | Alerts engine (price move, fato relevante, dividend), in-app | S05, S13, S15 |
 | S18 | Telegram delivery for alerts and digest | S16, S17 |
-| S19 | Demo mode, seed data, Vercel deploy | S18 (in practice all of S01–S18) |
+| S19 | Demo mode, seed data, hosted Postgres, Vercel deploy | S18 (in practice all of S01–S18) |
 | S20 | README polish: architecture diagram, ADR index, screenshots | S19 |
 
 After S05, slices S07, S08, S09 and S10 are independent and can run in parallel. S15 can run alongside S12 and S13.

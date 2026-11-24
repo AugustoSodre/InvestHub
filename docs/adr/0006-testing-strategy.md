@@ -1,6 +1,6 @@
 # 0006. Testing strategy
 
-- **Status:** Accepted, 2026-11-23
+- **Status:** Accepted, 2026-11-23. Test entry point superseded by [0007](0007-domain-modules-next-free-core.md).
 
 ## Context
 

@@ -22,8 +22,8 @@ TypeScript · Next.js · pg-boss worker · PostgreSQL · Drizzle · decimal.js �
 ## How it's built
 
 - **Spec-driven:** each vertical slice is a GitHub issue with Given/When/Then acceptance criteria.
-- **Vertical slice architecture:** `src/features/<slice>/` holds UI, logic, queries and tests together.
-- **TDD** at the slice boundary against a real Postgres.
+- **Vertical slices over domain modules:** each slice adds behaviour to a feature module in `src/features/<module>/` (ledger, valuation, …), which holds its UI, logic, queries and tests together.
+- **TDD** at each module's interface against a real Postgres.
 
 ## Docs
 

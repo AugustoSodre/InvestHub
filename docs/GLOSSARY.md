@@ -50,6 +50,8 @@ Domain terms as used in this codebase. Brazilian market terms keep their Portugu
 
 **Digest**: the weekly AI-written summary (Monday 07:00 BRT, PT-BR) of portfolio change, top movers with cited news and upcoming events. Stored for history.
 
+**Feature module**: a folder in `src/features/<module>/` named after one domain concept (e.g. `ledger`, `valuation`). Holds that concept's UI, server actions, domain logic, queries and tests. See [ADR 0007](adr/0007-domain-modules-next-free-core.md).
+
 **Ledger event**: an immutable record of something that happened to a position: buy, sell, dividend, JCP, split, bonus shares, fee. Has date, quantity, price, currency and account. Positions are derived from ledger events.
 
 **Pending event**: a ledger event suggested by the worker (e.g. a detected dividend or split) that is not part of the ledger until the user confirms it.
@@ -58,4 +60,4 @@ Domain terms as used in this codebase. Brazilian market terms keep their Portugu
 
 **Snapshot**: a stored end-of-day price (and derived portfolio value) for a date. Taken daily from day one; the basis for history charts and TWR.
 
-**Slice**: a vertical feature cut through UI, logic, database and tests, living in `src/features/<slice>/`. Each slice is one GitHub issue `Sxx · <name>`.
+**Slice**: a unit of delivery: one GitHub issue `Sxx · <name>` that cuts vertically through UI, logic, database and tests. A slice adds behaviour to one or more feature modules; it is not a folder.

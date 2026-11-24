@@ -8,25 +8,29 @@ TypeScript, Next.js (App Router), pg-boss worker, PostgreSQL, Drizzle, decimal.j
 
 ## Layout
 
-- `src/features/<slice>/`: everything for one slice together: UI, server actions, domain logic, queries, tests.
+- `src/features/<module>/`: one feature module per domain concept: `accounts`, `catalog`, `ledger`, `valuation`, `fixed-income`, `performance`, `research`, `alerts`, `notifications`. Each holds its UI, server actions, domain logic, queries and tests. A slice (issue) adds behaviour to one or more modules; it never gets its own folder. See ADR 0007.
 - `src/integrations/<provider>/`: provider adapters (brapi, yahoo, finnhub, coingecko, cvm, tesouro, bcb, news, llm) with their fixtures.
 - `src/shared/`: db client, decimal helpers, business-day calendar.
-- `src/worker/`: job entrypoint and schedules.
+- `src/worker/`: job entrypoint and schedules. Every pg-boss schedule sets `tz: 'America/Sao_Paulo'`; without it, cron times run in UTC (07:00 BRT would fire at 04:00 BRT).
 - `src/app/`: thin routes only. Import from features; put no logic here.
 
 Do not create layer folders (`services/`, `controllers/`, `repositories/`) across features.
 
+Domain logic is plain TypeScript: functions that take a database handle as an argument and never import `next/*` or `server-only`. Server actions (`actions.ts`) and pg-boss job handlers are thin adapters: parse input, call the domain function, then revalidate (actions only). The worker imports feature modules directly.
+
 ## Money and numbers
 
 - Never use JavaScript `number` for money, prices, quantities, rates or FX. Use `Decimal` from decimal.js.
+- One exception: chart data. Recharts only accepts numbers, so convert `Decimal` to `number` when building chart props, for display only. Never feed a converted value back into a calculation.
 - Store them as Postgres `numeric` (quantities `numeric(36,18)`). Wrap driver strings in `Decimal` at the boundary.
 - Keep cost basis in the asset's original currency. Convert to BRL only for display, using PTAX (previous business day on holidays).
 
 ## TDD
 
 - Start every slice from its issue's Given/When/Then criteria. Write each as a failing test first, then make it pass, then refactor.
-- Test at the slice boundary: call the server action, handler or job and assert on the real database. Do not mock slice internals.
+- Test at the module's interface: call its domain functions with a real database handle and assert on the database and the result. Do not test through server actions, and do not mock module internals.
 - Integration tests use Testcontainers Postgres. Never use SQLite or pg-mem.
+- Test isolation: one Postgres container per test run (Vitest `globalSetup`), migrations applied once to a template database, and each test file gets its own database cloned from it (`CREATE DATABASE ... TEMPLATE`). Files run in parallel without sharing data; tests inside a file clean up after themselves.
 - Never call real external APIs in tests. Record fixtures and replay them with MSW.
 - Domain math (average price, accrual, IR/IOF, TWR) gets unit tests with exact decimal expectations.
 
