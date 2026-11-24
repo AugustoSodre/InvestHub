@@ -23,3 +23,7 @@ next-env.d.ts
 *.pem
 .vercel
 *.log
+
+# Claude Code local state
+.claude/worktrees/
+.claude/settings.local.json
