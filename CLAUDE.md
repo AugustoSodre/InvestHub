@@ -55,6 +55,7 @@ Domain logic is plain TypeScript: functions that take a database handle as an ar
 - Conventional Commits.
 - PR body includes `Closes #<issue>`. Squash merge.
 - The human reviews and merges PRs. Never merge yourself.
+- `gh pr edit` and `gh issue edit` fail here ("Projects (classic) is being deprecated"). Use the REST API instead: `gh api -X PATCH repos/AugustoSodre/InvestHub/pulls/<n> -F body=@file.md` (or `.../issues/<n>`). `gh pr view`, `gh pr list` and `gh issue view` work.
 - Never add `Co-Authored-By: Claude`, "Generated with Claude Code" or any Claude/Anthropic attribution to commits, PRs or issues.
 
 ## Agent workflow per issue
