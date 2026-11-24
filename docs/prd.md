@@ -113,14 +113,14 @@ Each slice is a vertical cut (UI, logic, database, tests) tracked as one GitHub 
 | S09 | Tesouro Direto (market price) | S05 |
 | S10 | Fixed-income calculator: Pré, %CDI, IPCA+, B3 holiday calendar | S05 |
 | S11 | Gross vs net value (IR, IOF, LCI/LCA exempt) | S10 |
-| S12 | B3 spreadsheet import | S03 |
+| S12 | B3 spreadsheet import | S04 |
 | S13 | Dividend and corporate-action suggestions, user confirms | S05 |
 | S14 | History chart, TWR, benchmarks (CDI, IBOV, S&P in BRL) | S06 |
-| S15 | News ingestion and per-holding feed | S02 |
+| S15 | News ingestion and per-holding feed | S03 |
 | S16 | LLM provider interface and weekly digest | S14, S15 |
 | S17 | Alerts engine (price move, fato relevante, dividend), in-app | S05, S13, S15 |
 | S18 | Telegram delivery for alerts and digest | S16, S17 |
-| S19 | Demo mode, seed data, Vercel deploy | S14 |
+| S19 | Demo mode, seed data, Vercel deploy | S18 (in practice all of S01–S18) |
 | S20 | README polish: architecture diagram, ADR index, screenshots | S19 |
 
 After S05, slices S07, S08, S09 and S10 are independent and can run in parallel. S15 can run alongside S12 and S13.
