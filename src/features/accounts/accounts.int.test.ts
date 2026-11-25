@@ -4,6 +4,7 @@ import { SEEDED_USER_ID } from "@/shared/current-user";
 import { accounts, users } from "@/shared/db/schema";
 import { testDb } from "../../../test/db";
 import { createAccount, listAccounts } from "./accounts";
+import { ACCOUNT_TEXT_MAX_LENGTH } from "./account-input";
 
 const db = testDb();
 const userId = SEEDED_USER_ID;
@@ -133,7 +134,10 @@ describe("accounts", () => {
   });
 
   it("rejects names longer than the limit", async () => {
-    const result = await createAccount(db, userId, { ...XP, name: "x".repeat(101) });
+    const result = await createAccount(db, userId, {
+      ...XP,
+      name: "x".repeat(ACCOUNT_TEXT_MAX_LENGTH + 1),
+    });
 
     expect(result).toEqual({ ok: false, fieldErrors: { name: "tooLong" } });
   });

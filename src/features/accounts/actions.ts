@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { currentUserId } from "@/shared/current-user";
 import { appDb } from "@/shared/db/app-db";
-import type { AccountField, AccountFieldErrors } from "./account-input";
+import { ACCOUNT_FIELDS, type AccountField, type AccountFieldErrors } from "./account-input";
 import { createAccount } from "./accounts";
 
 export type CreateAccountFormState =
@@ -25,12 +25,10 @@ export async function createAccountAction(
     const value = formData.get(name);
     return typeof value === "string" ? value : "";
   };
-  const values = {
-    name: field("name"),
-    institution: field("institution"),
-    country: field("country"),
-    currency: field("currency"),
-  };
+  const values = Object.fromEntries(ACCOUNT_FIELDS.map((name) => [name, field(name)])) as Record<
+    AccountField,
+    string
+  >;
 
   const result = await createAccount(appDb(), currentUserId(), values);
   if (!result.ok) {

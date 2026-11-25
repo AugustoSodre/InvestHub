@@ -1,12 +1,7 @@
 // Validation for new accounts. No database imports, so the client form can use
 // the same constants and types without bundling drizzle.
 import { z } from "zod";
-import { COUNTRIES, CURRENCIES, type Country, type Currency } from "@/shared/db/enums";
-
-export const ACCOUNT_COUNTRIES = COUNTRIES;
-export const ACCOUNT_CURRENCIES = CURRENCIES;
-export type AccountCountry = Country;
-export type AccountCurrency = Currency;
+import { COUNTRIES, CURRENCIES } from "@/shared/db/enums";
 
 export const ACCOUNT_TEXT_MAX_LENGTH = 100;
 
@@ -22,12 +17,15 @@ const requiredText = z
 const accountInput = z.object({
   name: requiredText,
   institution: requiredText,
-  country: z.enum(ACCOUNT_COUNTRIES, { error: "invalid" }),
-  currency: z.enum(ACCOUNT_CURRENCIES, { error: "invalid" }),
+  country: z.enum(COUNTRIES, { error: "invalid" }),
+  currency: z.enum(CURRENCIES, { error: "invalid" }),
 });
 
 export type AccountInput = z.infer<typeof accountInput>;
 export type AccountField = keyof AccountInput;
+
+/** Every form field, derived from the schema so a new field only needs adding there. */
+export const ACCOUNT_FIELDS: readonly AccountField[] = accountInput.keyof().options;
 export type AccountFieldErrors = Partial<Record<AccountField, AccountFieldErrorCode>>;
 
 export type ParsedAccountInput =

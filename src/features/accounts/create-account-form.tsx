@@ -6,12 +6,8 @@ import { Button } from "@/shared/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/shared/ui/field";
 import { Input } from "@/shared/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/shared/ui/native-select";
-import {
-  ACCOUNT_COUNTRIES,
-  ACCOUNT_CURRENCIES,
-  ACCOUNT_TEXT_MAX_LENGTH,
-  type AccountField,
-} from "./account-input";
+import { COUNTRIES, CURRENCIES } from "@/shared/db/enums";
+import { ACCOUNT_TEXT_MAX_LENGTH, type AccountField } from "./account-input";
 import { createAccountAction, type CreateAccountFormState } from "./actions";
 
 const INITIAL_STATE: CreateAccountFormState = { status: "idle" };
@@ -30,9 +26,11 @@ export function CreateAccountForm() {
   const values = state.status === "invalid" ? state.values : DEFAULT_VALUES;
   const fieldErrors = state.status === "invalid" ? state.fieldErrors : {};
 
+  const isInvalid = (field: AccountField) => fieldErrors[field] !== undefined;
+
   // id, name and the ARIA links between a control and its error message.
   const controlProps = (field: AccountField) => {
-    const invalid = fieldErrors[field] !== undefined;
+    const invalid = isInvalid(field);
     return {
       id: `account-${field}`,
       name: field,
@@ -54,7 +52,7 @@ export function CreateAccountForm() {
   return (
     <form action={formAction} noValidate>
       <FieldGroup>
-        <Field data-invalid={fieldErrors.name !== undefined || undefined}>
+        <Field data-invalid={isInvalid("name") || undefined}>
           <FieldLabel htmlFor="account-name">{t("form.name")}</FieldLabel>
           <Input
             {...controlProps("name")}
@@ -65,7 +63,7 @@ export function CreateAccountForm() {
           {errorFor("name")}
         </Field>
 
-        <Field data-invalid={fieldErrors.institution !== undefined || undefined}>
+        <Field data-invalid={isInvalid("institution") || undefined}>
           <FieldLabel htmlFor="account-institution">{t("form.institution")}</FieldLabel>
           <Input
             {...controlProps("institution")}
@@ -77,14 +75,14 @@ export function CreateAccountForm() {
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field data-invalid={fieldErrors.country !== undefined || undefined}>
+          <Field data-invalid={isInvalid("country") || undefined}>
             <FieldLabel htmlFor="account-country">{t("form.country")}</FieldLabel>
             <NativeSelect
               {...controlProps("country")}
               defaultValue={values.country}
               className="w-full"
             >
-              {ACCOUNT_COUNTRIES.map((country) => (
+              {COUNTRIES.map((country) => (
                 <NativeSelectOption key={country} value={country}>
                   {t(`country.${country}`)}
                 </NativeSelectOption>
@@ -93,14 +91,14 @@ export function CreateAccountForm() {
             {errorFor("country")}
           </Field>
 
-          <Field data-invalid={fieldErrors.currency !== undefined || undefined}>
+          <Field data-invalid={isInvalid("currency") || undefined}>
             <FieldLabel htmlFor="account-currency">{t("form.currency")}</FieldLabel>
             <NativeSelect
               {...controlProps("currency")}
               defaultValue={values.currency}
               className="w-full"
             >
-              {ACCOUNT_CURRENCIES.map((currency) => (
+              {CURRENCIES.map((currency) => (
                 <NativeSelectOption key={currency} value={currency}>
                   {t(`currency.${currency}`)}
                 </NativeSelectOption>
