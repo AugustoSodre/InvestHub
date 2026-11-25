@@ -5,8 +5,10 @@ import { describe, expect, it, vi } from "vitest";
 import { DEFAULT_LOCALE, TIME_ZONE } from "@/shared/i18n/config";
 import messages from "@/shared/i18n/messages/pt-BR.json";
 import type { SearchAssetsFormState } from "./actions";
+import { AddAssetForm } from "./add-asset-form";
 import { SearchOutcome } from "./asset-search";
 import type { Asset, AssetCandidate } from "./catalog";
+import { formValuesFor } from "./catalog-forms";
 import { CatalogPage } from "./catalog-page";
 
 // Vitest runs outside Next's react-server environment, so the two framework
@@ -138,5 +140,41 @@ describe("SearchOutcome", () => {
     expect(html).toContain(messages.catalog.tokenNotice);
     expect(messages.catalog.tokenNotice).toContain("BRAPI_TOKEN");
     expect(messages.catalog.tokenNotice).toContain(".env");
+  });
+});
+
+describe("AddAssetForm after picking a search result", () => {
+  const HGLG11: AssetCandidate = {
+    ticker: "HGLG11",
+    name: "PÁTRIA LOG - FUNDO DE INVESTIMENTO IMOBILIÁRIO - RESPONSABILIDADE LIMITADA",
+    type: "FII",
+    naturalKey: "HGLG11@B3",
+    currency: "BRL",
+    priceSource: "brapi",
+  };
+
+  function renderPicked(candidate: AssetCandidate | null): string {
+    return renderWithMessages(createElement(AddAssetForm, { initial: formValuesFor(candidate) }));
+  }
+
+  it("pre-fills a picked FII with type FII, and the type can still be changed", () => {
+    const html = renderPicked(HGLG11);
+
+    expect(html).toContain('value="HGLG11"');
+    expect(html).toMatch(/<option[^>]*value="FII" selected=""/);
+    // Every B3 type is offered in an enabled type select, so FII can be overridden.
+    expect(html).toMatch(/<select[^>]*name="type"/);
+    expect(html).not.toMatch(/<select[^>]*name="type"[^>]*disabled/);
+    for (const type of ["BR_STOCK", "FII", "BDR", "BR_ETF"] as const) {
+      expect(html).toContain(`value="${type}"`);
+      expect(html).toContain(messages.catalog.type[type]);
+    }
+  });
+
+  it("starts a manual add as a BR stock priced by brapi when nothing was picked", () => {
+    const html = renderPicked(null);
+
+    expect(html).toMatch(/<option[^>]*value="BR_STOCK" selected=""/);
+    expect(html).toMatch(/<option[^>]*value="brapi" selected=""/);
   });
 });

@@ -65,12 +65,11 @@ describe("searchAssets", () => {
     expect(result.ok && result.candidates.map((c) => c.naturalKey)).toEqual(["PETR4@B3"]);
   });
 
-  it("returns no candidates for a blank query without calling brapi", async () => {
+  it("rejects a blank query without calling brapi", async () => {
     // No handler registered: a request would fail the test.
     expect(await searchAssets(brapi(), "   ")).toEqual({
-      ok: true,
-      tokenMissing: false,
-      candidates: [],
+      ok: false,
+      fieldErrors: { query: "required" },
     });
   });
 
@@ -220,6 +219,12 @@ describe("addAsset", () => {
       { type: "BR_STOCK", ticker: "PETR4", name: "x".repeat(ASSET_NAME_MAX_LENGTH + 1) },
       { name: "tooLong" },
     ],
+    [
+      "a name that is not text",
+      { type: "BR_STOCK", ticker: "PETR4", name: 42 },
+      { name: "invalid" },
+    ],
+    ["a ticker that is not text", { type: "BR_STOCK", ticker: 42 }, { ticker: "invalid" }],
     ["missing fields", {}, { type: "invalid", ticker: "required" }],
     ["no input at all", undefined, { type: "invalid", ticker: "required" }],
   ])("rejects %s and saves nothing", async (_label, input, fieldErrors) => {

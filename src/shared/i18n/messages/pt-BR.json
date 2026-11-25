@@ -81,7 +81,7 @@
       "tokenMissing": "A brapi exige um token para esta busca. Defina BRAPI_TOKEN no arquivo .env com seu token gratuito da brapi.dev e reinicie o app. Enquanto isso, adicione o ativo manualmente abaixo.",
       "tokenInvalid": "A brapi recusou o BRAPI_TOKEN definido no arquivo .env. Confira o token e reinicie o app. Enquanto isso, adicione o ativo manualmente abaixo."
     },
-    "tokenNotice": "Sem token, a brapi só fornece dados de PETR4, VALE3, MGLU3 e ITUB4. Para os demais ativos, defina BRAPI_TOKEN no arquivo .env com seu token gratuito da brapi.dev e reinicie o app.",
+    "tokenNotice": "A busca funciona sem token, mas os preços de ativos além de PETR4, VALE3, MGLU3 e ITUB4 exigem um token da brapi. Defina BRAPI_TOKEN no arquivo .env com seu token gratuito da brapi.dev e reinicie o app.",
     "form": {
       "title": "Adicionar ativo",
       "description": "Escolha um resultado da busca ou preencha os campos manualmente.",

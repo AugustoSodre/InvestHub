@@ -4,13 +4,19 @@ import { revalidatePath } from "next/cache";
 import { createBrapiClient, type BrapiError } from "@/integrations/brapi/brapi";
 import { appDb } from "@/shared/db/app-db";
 import { serverEnv } from "@/shared/env";
-import { ASSET_FIELDS, type AssetField, type AssetFieldErrors } from "./asset-input";
+import {
+  ASSET_FIELDS,
+  type AssetField,
+  type AssetFieldErrors,
+  type SearchFieldErrors,
+} from "./asset-input";
 import { addAsset, searchAssets, type AssetCandidate } from "./catalog";
 
 export type SearchAssetsFormState =
   | { status: "idle" }
   | { status: "found"; query: string; candidates: AssetCandidate[]; tokenMissing: boolean }
-  | { status: "failed"; query: string; error: BrapiError };
+  | { status: "failed"; query: string; error: BrapiError }
+  | { status: "invalid"; query: string; fieldErrors: SearchFieldErrors };
 
 export type AddAssetFormState =
   | { status: "idle" }
@@ -36,7 +42,11 @@ export async function searchAssetsAction(
   const brapi = createBrapiClient({ token: serverEnv().brapiToken });
 
   const result = await searchAssets(brapi, query);
-  if (!result.ok) return { status: "failed", query, error: result.error };
+  if (!result.ok) {
+    return "fieldErrors" in result
+      ? { status: "invalid", query, fieldErrors: result.fieldErrors }
+      : { status: "failed", query, error: result.error };
+  }
   return {
     status: "found",
     query,

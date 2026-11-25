@@ -1,76 +1,70 @@
 import { and, asc, eq } from "drizzle-orm";
 import { requiresToken, type BrapiClient, type BrapiError } from "@/integrations/brapi/brapi";
 import type { Database } from "@/shared/db/client";
-import type { Currency, PriceSource } from "@/shared/db/enums";
 import { assets } from "@/shared/db/schema";
 import {
   B3_TICKER,
-  b3NaturalKey,
-  defaultCurrency,
-  defaultPriceSource,
+  b3Asset,
   parseAssetInput,
+  parseSearchInput,
   type AddableAssetType,
+  type AssetCandidate,
   type AssetFieldErrors,
+  type SearchFieldErrors,
 } from "./asset-input";
 
-export type Asset = typeof assets.$inferSelect;
+export type { AssetCandidate } from "./asset-input";
 
-/** A search result the user can add as is, or after overriding its type and price source. */
-export type AssetCandidate = {
-  ticker: string;
-  name: string;
-  type: AddableAssetType;
-  naturalKey: string;
-  currency: Currency;
-  priceSource: PriceSource;
-};
+export type Asset = typeof assets.$inferSelect;
 
 export type SearchAssetsResult =
   | {
       ok: true;
+      /** Search results the user can add as is, or after overriding type and price source. */
       candidates: AssetCandidate[];
-      /** No token is configured and brapi needs one for some of these tickers. */
+      /** No token is configured and brapi needs one for what was searched or found. */
       tokenMissing: boolean;
     }
-  | { ok: false; error: BrapiError };
+  | { ok: false; error: BrapiError }
+  | { ok: false; fieldErrors: SearchFieldErrors };
 
 export type AddAssetResult =
   { ok: true; asset: Asset; created: boolean } | { ok: false; fieldErrors: AssetFieldErrors };
 
 /**
- * Searches B3 tickers on brapi and turns each match into a catalog candidate,
- * with the type pre-filled from brapi's sub-type. Fractional-market tickers
- * (PETR4F) are left out: they trade the same asset as PETR4.
+ * Validates an untrusted query, searches B3 tickers on brapi and turns each
+ * match into a catalog candidate, with the type pre-filled from brapi's
+ * sub-type. Fractional-market tickers (PETR4F) are left out: they trade the
+ * same asset as PETR4.
  */
-export async function searchAssets(brapi: BrapiClient, query: string): Promise<SearchAssetsResult> {
-  const normalized = query.trim().toUpperCase();
-  if (normalized === "") return { ok: true, candidates: [], tokenMissing: false };
+export async function searchAssets(
+  brapi: BrapiClient,
+  input: unknown,
+): Promise<SearchAssetsResult> {
+  const parsed = parseSearchInput(input);
+  if (!parsed.ok) return parsed;
+  const { query } = parsed;
 
-  const result = await brapi.searchTickers(normalized);
+  const result = await brapi.searchTickers(query);
   if (!result.ok) return result;
 
   const candidates = result.results
     .filter((match) => B3_TICKER.test(match.ticker))
-    .map((match): AssetCandidate => {
-      const type = typeFromBrapi(match.subType ?? match.type);
-      return {
-        ticker: match.ticker,
-        name: match.name,
-        type,
-        naturalKey: b3NaturalKey(match.ticker),
-        currency: defaultCurrency(type),
-        priceSource: defaultPriceSource(type),
-      };
-    });
+    .map((match) =>
+      b3Asset(typeFromBrapi(match.subType ?? match.type), match.ticker, { name: match.name }),
+    );
 
-  return {
-    ok: true,
-    candidates,
-    tokenMissing: !brapi.hasToken && candidates.some((c) => requiresToken(c.ticker)),
-  };
+  // The query counts too: a search that found nothing (or only filtered-out
+  // tickers) for a non-sandbox ticker still needs the explanation.
+  const needsToken = [query, ...candidates.map((c) => c.ticker)].some(requiresToken);
+  return { ok: true, candidates, tokenMissing: !brapi.hasToken && needsToken };
 }
 
-/** brapi tells FIIs from ETFs (both end in 11) by sub-type. Anything else is a stock. */
+/**
+ * brapi tells FIIs from ETFs (both end in 11) by sub-type. Everything else,
+ * including fund sub-types the catalog has no type for yet (fi-infra, fi-agro,
+ * fip, fidc), falls back to BR_STOCK; the user can override it before adding.
+ */
 function typeFromBrapi(subType: string): AddableAssetType {
   switch (subType) {
     case "fii":
@@ -92,12 +86,12 @@ function typeFromBrapi(subType: string): AddableAssetType {
 export async function addAsset(db: Database, input: unknown): Promise<AddAssetResult> {
   const parsed = parseAssetInput(input);
   if (!parsed.ok) return parsed;
-  const values = parsed.data;
+  const { type, naturalKey, name, currency, priceSource } = parsed.data;
 
   // The unique index, not a pre-check, decides: it also holds under concurrent adds.
   const [inserted] = await db
     .insert(assets)
-    .values(values)
+    .values({ type, naturalKey, name, currency, priceSource })
     .onConflictDoNothing({ target: [assets.type, assets.naturalKey] })
     .returning();
   if (inserted) return { ok: true, asset: inserted, created: true };
@@ -105,8 +99,8 @@ export async function addAsset(db: Database, input: unknown): Promise<AddAssetRe
   const [existing] = await db
     .select()
     .from(assets)
-    .where(and(eq(assets.type, values.type), eq(assets.naturalKey, values.naturalKey)));
-  if (!existing) throw new Error(`Asset ${values.naturalKey} conflicted but was not found.`);
+    .where(and(eq(assets.type, type), eq(assets.naturalKey, naturalKey)));
+  if (!existing) throw new Error(`Asset ${naturalKey} conflicted but was not found.`);
   return { ok: true, asset: existing, created: false };
 }
 

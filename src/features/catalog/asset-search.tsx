@@ -3,10 +3,10 @@
 import { useTranslations } from "next-intl";
 import { useActionState } from "react";
 import { Button } from "@/shared/ui/button";
-import { Field, FieldLabel } from "@/shared/ui/field";
+import { Field, FieldError, FieldLabel } from "@/shared/ui/field";
 import { Input } from "@/shared/ui/input";
 import { searchAssetsAction, type SearchAssetsFormState } from "./actions";
-import type { AssetCandidate } from "./catalog";
+import { SEARCH_QUERY_MAX_LENGTH, type AssetCandidate } from "./asset-input";
 
 const INITIAL_STATE: SearchAssetsFormState = { status: "idle" };
 
@@ -17,11 +17,12 @@ export function AssetSearch({ onPick }: { onPick: OnPick }) {
   const t = useTranslations("catalog");
   const [state, formAction, pending] = useActionState(searchAssetsAction, INITIAL_STATE);
   const query = state.status === "idle" ? "" : state.query;
+  const error = state.status === "invalid" ? state.fieldErrors.query : undefined;
 
   return (
     <div className="flex flex-col gap-4">
-      <form action={formAction} role="search" className="flex items-end gap-3">
-        <Field className="flex-1">
+      <form action={formAction} role="search" noValidate className="flex items-start gap-3">
+        <Field className="flex-1" data-invalid={error ? true : undefined}>
           <FieldLabel htmlFor="asset-search-query">{t("search.label")}</FieldLabel>
           <Input
             id="asset-search-query"
@@ -29,9 +30,16 @@ export function AssetSearch({ onPick }: { onPick: OnPick }) {
             defaultValue={query}
             placeholder={t("search.placeholder")}
             autoComplete="off"
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? "asset-search-query-error" : undefined}
           />
+          {error ? (
+            <FieldError id="asset-search-query-error">
+              {t(`errors.${error}`, { max: SEARCH_QUERY_MAX_LENGTH })}
+            </FieldError>
+          ) : null}
         </Field>
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" disabled={pending} className="mt-7">
           {pending ? t("search.submitting") : t("search.submit")}
         </Button>
       </form>
@@ -44,7 +52,8 @@ export function AssetSearch({ onPick }: { onPick: OnPick }) {
 export function SearchOutcome({ state, onPick }: { state: SearchAssetsFormState; onPick: OnPick }) {
   const t = useTranslations("catalog");
 
-  if (state.status === "idle") return null;
+  // An invalid query is reported next to the search field instead.
+  if (state.status === "idle" || state.status === "invalid") return null;
 
   if (state.status === "failed") {
     return (
