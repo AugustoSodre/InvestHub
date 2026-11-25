@@ -124,6 +124,9 @@ async function readJson(response: Response): Promise<unknown> {
 
 // The free plan allows one request at a time, account-wide (a second parallel
 // call gets HTTP 429). Every brapi call in this process goes through this chain.
+// The queue is per process only: once the worker also calls brapi (later
+// slices), the web app and the worker need a cross-process lock (e.g. a
+// Postgres advisory lock) to honour the account-wide limit of 1.
 let queue: Promise<unknown> = Promise.resolve();
 
 function oneAtATime<T>(task: () => Promise<T>): Promise<T> {

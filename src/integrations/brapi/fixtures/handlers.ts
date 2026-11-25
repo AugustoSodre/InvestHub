@@ -9,6 +9,11 @@
 //   quote endpoint; brapi uses the same error shape on every endpoint.
 // - invalid-token.json: GET /api/quote/HGLG11 with a made-up Bearer token (HTTP 401).
 //
+// brapi's `name` varies between calls: HGLG11 came back both as "PÁTRIA LOG -
+// FUNDO DE INVESTIMENTO IMOBILIÁRIO - RESPONSABILIDADE LIMITADA" and as "FII
+// HGLG PAX". The fixtures keep the names from the 2026-11-24 recording, so
+// tests assert on those, not on whatever brapi returns today.
+//
 // RATE_LIMITED_BODY below is synthesized, not recorded: brapi documents HTTP 429
 // with a Retry-After header but gives no example body, and we do not hammer the
 // API to provoke one. The adapter only reads the status code.
