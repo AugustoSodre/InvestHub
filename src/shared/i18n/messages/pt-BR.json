@@ -7,5 +7,47 @@
     "title": "InvestHub",
     "tagline": "Ações, FIIs, renda fixa, cripto e ativos americanos em uma única carteira, em reais.",
     "cta": "Começar"
+  },
+  "accounts": {
+    "title": "Contas",
+    "description": "Corretoras e exchanges onde seus ativos ficam custodiados.",
+    "empty": {
+      "title": "Nenhuma conta cadastrada",
+      "description": "Adicione sua primeira conta, como XP, Avenue ou Binance, para começar a registrar seus investimentos."
+    },
+    "list": {
+      "title": "Suas contas",
+      "name": "Nome",
+      "institution": "Instituição",
+      "country": "País",
+      "currency": "Moeda"
+    },
+    "form": {
+      "title": "Nova conta",
+      "name": "Nome",
+      "namePlaceholder": "Ex.: XP",
+      "institution": "Instituição",
+      "institutionPlaceholder": "Ex.: XP Investimentos",
+      "country": "País",
+      "currency": "Moeda",
+      "submit": "Adicionar conta",
+      "submitting": "Adicionando…",
+      "success": "Conta adicionada."
+    },
+    "country": {
+      "BR": "Brasil",
+      "US": "Estados Unidos",
+      "GLOBAL": "Global"
+    },
+    "currency": {
+      "BRL": "Real (BRL)",
+      "USD": "Dólar americano (USD)"
+    },
+    "errors": {
+      "required": "Campo obrigatório.",
+      "tooLong": "Use no máximo {max} caracteres.",
+      "invalid": "Selecione uma opção válida.",
+      "duplicate": "Conta já existe."
+    }
   }
 }

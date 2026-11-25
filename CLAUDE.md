@@ -10,14 +10,14 @@ TypeScript, Next.js (App Router), pg-boss worker, PostgreSQL, Drizzle, decimal.j
 
 - `src/features/<module>/`: one feature module per domain concept: `accounts`, `catalog`, `ledger`, `valuation`, `fixed-income`, `performance`, `research`, `alerts`, `notifications`. Each holds its UI, server actions, domain logic, queries and tests. A slice (issue) adds behaviour to one or more modules; it never gets its own folder. See ADR 0007.
 - `src/integrations/<provider>/`: provider adapters with their fixtures. Use exactly these folder names: `brapi`, `yahoo`, `finnhub`, `coingecko`, `cvm`, `tesouro-transparente`, `bcb`, `google-news`, `rss`, `llm/<provider>` (e.g. `llm/gemini`, `llm/ollama`), `telegram`. Add a new name here before creating a new folder.
-- `src/shared/`: db client and migrations (`db/`), decimal helpers (`decimal.ts`), i18n config and PT-BR messages (`i18n/`), shadcn/ui components (`ui/`), business-day calendar, and `env.ts`: `serverEnv()` is the only reader of `process.env` (validated, `server-only`). Actions, routes and worker jobs call it and pass values in; feature domain code takes config as arguments and may not import it.
+- `src/shared/`: db client and migrations (`db/`), decimal helpers (`decimal.ts`), i18n config and PT-BR messages (`i18n/`), shadcn/ui components (`ui/`), business-day calendar, `current-user.ts` (the seeded single user's id; the one place auth plugs in later), and `env.ts`: `serverEnv()` is the only reader of `process.env` (validated, `server-only`). Actions, routes and worker jobs call it and pass values in; feature domain code takes config as arguments and may not import it.
 - `test/`: cross-cutting test harness (Vitest setup, per-file database, MSW server, fixtures). `e2e/`: Playwright specs. `tooling/`: lint rules and checks for the hard rules. Module tests live next to their code.
 - `src/worker/`: job entrypoint and schedules. Every pg-boss schedule sets `tz: 'America/Sao_Paulo'`; without it, cron times run in UTC (07:00 BRT would fire at 04:00 BRT).
 - `src/app/`: thin routes only. Import from features; put no logic here.
 
 Do not create layer folders (`services/`, `controllers/`, `repositories/`) across features.
 
-Domain logic is plain TypeScript: functions that take a database handle as an argument and never import `next/*` or `server-only`. Server actions (`actions.ts`) and pg-boss job handlers are thin adapters: parse input, call the domain function, then revalidate (actions only). The worker imports feature modules directly.
+Domain logic is plain TypeScript: functions that take a database handle as an argument and never import `next/*` or `server-only`. Server actions (`actions.ts`) and pg-boss job handlers are thin adapters: read the raw input (e.g. `FormData`), call the domain function, then revalidate (actions only). Input validation (zod) lives in the domain function, not the action (ADR 0007). The worker imports feature modules directly.
 
 ## Money and numbers
 

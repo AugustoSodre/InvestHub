@@ -1,6 +1,6 @@
 # 0007. Domain modules with a Next-free core
 
-- **Status:** Accepted, 2026-11-23
+- **Status:** Accepted, 2026-11-23. Amended 2026-11-24: input validation moved from server actions into domain functions (S01, #27).
 - **Supersedes:** the folder-per-slice layout in [0001](0001-nextjs-monolith-with-worker.md) and the "call the server action" test entry point in [0006](0006-testing-strategy.md). Everything else in those ADRs stands.
 
 ## Context
@@ -15,7 +15,8 @@ Two problems surfaced in an architecture review before any code was written:
 - `src/features/<module>/` holds one **feature module** per domain concept from the glossary: `accounts`, `catalog`, `ledger`, `valuation`, `fixed-income`, `performance`, `research`, `alerts`, `notifications`. Each keeps its own UI, server actions, domain logic, queries and tests together.
 - A **slice** is a unit of delivery (one issue). It adds behaviour to one or more feature modules and never gets its own folder. Example: S12 (B3 import) adds an importer inside `ledger` that produces ledger events through the same entry point as manual entry.
 - **Domain logic is plain TypeScript.** Domain functions take a database handle (and any provider they need) as arguments and never import `next/*` or `server-only`.
-- **Server actions and job handlers are thin adapters.** A server action parses input, calls a domain function, then revalidates. A pg-boss handler calls the same domain function.
+- **Server actions and job handlers are thin adapters.** A server action reads its raw input (for example `FormData`), calls a domain function, then revalidates. A pg-boss handler calls the same domain function.
+- **Domain functions validate their own input** (zod), taking it as `unknown` and returning field-level errors. Tests at the module interface then cover validation, and the worker gets the same checks as the web app.
 - **Tests call domain functions** with a Testcontainers Postgres handle and assert on the database and the returned result. They don't go through server actions.
 
 ## Consequences

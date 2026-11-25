@@ -59,6 +59,9 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      # `next start` runs with NODE_ENV=production, where a missing DATABASE_URL throws.
+      DATABASE_URL: postgres://investhub:investhub@127.0.0.1:55432/investhub_dev
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -67,6 +70,9 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm exec playwright install --with-deps chromium
+      # Pages that read the database need the compose Postgres, migrated.
+      - run: docker compose up -d --wait
+      - run: pnpm db:migrate
       # CI=true makes the Playwright webServer build and start the production app.
       - run: pnpm test:e2e
       - if: failure()
