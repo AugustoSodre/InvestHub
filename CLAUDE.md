@@ -10,8 +10,8 @@ TypeScript, Next.js (App Router), pg-boss worker, PostgreSQL, Drizzle, decimal.j
 
 - `src/features/<module>/`: one feature module per domain concept: `accounts`, `catalog`, `ledger`, `valuation`, `fixed-income`, `performance`, `research`, `alerts`, `notifications`. Each holds its UI, server actions, domain logic, queries and tests. A slice (issue) adds behaviour to one or more modules; it never gets its own folder. See ADR 0007.
 - `src/integrations/<provider>/`: provider adapters with their fixtures. Use exactly these folder names: `brapi`, `yahoo`, `finnhub`, `coingecko`, `cvm`, `tesouro-transparente`, `bcb`, `google-news`, `rss`, `llm/<provider>` (e.g. `llm/gemini`, `llm/ollama`), `telegram`. Add a new name here before creating a new folder.
-- `src/shared/`: db client and migrations (`db/`), decimal helpers (`decimal.ts`), i18n config and PT-BR messages (`i18n/`), shadcn/ui components (`ui/`), business-day calendar.
-- `test/`: cross-cutting test harness (Vitest setup, per-file database, MSW server, fixtures). `e2e/`: Playwright specs. Module tests live next to their code.
+- `src/shared/`: db client and migrations (`db/`), decimal helpers (`decimal.ts`), i18n config and PT-BR messages (`i18n/`), shadcn/ui components (`ui/`), business-day calendar, and `env.ts`: `serverEnv()` is the only reader of `process.env` (validated, `server-only`). Actions, routes and worker jobs call it and pass values in; feature domain code takes config as arguments and may not import it.
+- `test/`: cross-cutting test harness (Vitest setup, per-file database, MSW server, fixtures). `e2e/`: Playwright specs. `tooling/`: lint rules and checks for the hard rules. Module tests live next to their code.
 - `src/worker/`: job entrypoint and schedules. Every pg-boss schedule sets `tz: 'America/Sao_Paulo'`; without it, cron times run in UTC (07:00 BRT would fire at 04:00 BRT).
 - `src/app/`: thin routes only. Import from features; put no logic here.
 
@@ -22,7 +22,7 @@ Domain logic is plain TypeScript: functions that take a database handle as an ar
 ## Money and numbers
 
 - Never use JavaScript `number` for money, prices, quantities, rates or FX. Use `Decimal` from decimal.js.
-- One exception: chart data. Recharts only accepts numbers, so convert `Decimal` to `number` when building chart props, for display only. Never feed a converted value back into a calculation.
+- One exception: chart data. Recharts only accepts numbers, so convert with `toChartNumber()` from `src/shared/decimal.ts` when building chart props, for display only. Never feed a converted value back into a calculation. Lint bans `Number()`, `parseFloat`, `parseInt` and `.toNumber()` elsewhere in `src/`.
 - Store them as Postgres `numeric` (quantities `numeric(36,18)`). Wrap driver strings in `Decimal` at the boundary.
 - Keep cost basis in the asset's original currency. In BRL views, convert each event's cost at the PTAX sell rate of its trade date and current value at the latest PTAX, so BRL P&L includes the FX effect. Store converted values only as derived data, never as truth. Previous business day on weekends and holidays.
 
@@ -73,14 +73,18 @@ Independent slices (see the dependency table in `docs/prd.md`) may run in parall
 
 Node 22 (`.nvmrc`), pnpm through corepack (`corepack enable`). Docker must be running for the database and for integration tests.
 
-- `docker compose up -d --wait`: local Postgres on `127.0.0.1:55432` (the default when `DATABASE_URL` is unset, except with `NODE_ENV=production`, where a missing `DATABASE_URL` throws). `--wait` returns once it is healthy.
+- `docker compose up -d --wait`: local Postgres on `127.0.0.1:55432` with two databases: `investhub_dev` (development and agents; `.env.example` and the fallback when `DATABASE_URL` is unset) and `investhub` (real data, used only when `DATABASE_URL` names it). Never point agent work at `investhub`. With `NODE_ENV=production` a missing `DATABASE_URL` throws. `--wait` returns once it is healthy.
 - `pnpm db:migrate`: apply Drizzle migrations. Retries for up to 30s while Postgres is still starting. `pnpm db:generate` creates a migration from `src/shared/db/schema.ts`.
 - `pnpm dev`: Next.js on http://localhost:3000, bound to 127.0.0.1. `pnpm build` / `pnpm start` for production.
-- `pnpm worker`: pg-boss worker (`src/worker/index.ts`). Create schedules only through `schedule()` in `src/worker/schedule.ts`, which sets the São Paulo time zone. Name pg-boss instances `boss` (or `*boss`): the lint rule that blocks direct `.schedule(` calls matches by that name.
-- `pnpm lint`, `pnpm typecheck`, `pnpm format` (`pnpm format:check` in CI).
-- `pnpm test`: Vitest. Project `unit` runs `*.test.ts`; project `integration` runs `*.int.test.ts` against Testcontainers Postgres. Filter with `pnpm test --project unit` or a path.
+- `pnpm worker`: pg-boss worker (`src/worker/index.ts`). It and `db:migrate` run Node with `--conditions=react-server`, so `src/shared/env.ts` (`server-only`) loads outside Next. Create schedules only through `schedule()` in `src/worker/schedule.ts`, which sets the São Paulo time zone. Name pg-boss instances `boss` (or `*boss`): the lint rule that blocks direct `.schedule(` calls matches by that name.
+- `pnpm lint`: ESLint, including the hard rules in `tooling/eslint-hard-rules.mjs` (`process.env` only in `src/shared/env.ts`, no float parsing, no `NEXT_PUBLIC_`), then `tooling/check-next-public.mjs`. `pnpm typecheck`, `pnpm format` (`pnpm format:check` in CI).
+- `pnpm test`: Vitest. Project `unit` runs `*.test.ts`; project `integration` runs `*.int.test.ts` against Testcontainers Postgres. `pnpm test:unit` runs only the unit project and needs no Docker, so Testcontainers never goes in a plain `*.test.ts`. Filter with a path.
 - `pnpm test:e2e`: Playwright (`e2e/`). Starts `pnpm dev` itself, or reuses a running one. First run needs `pnpm exec playwright install chromium`.
 
 Test helpers: in an `*.int.test.ts` file, `testDb()` and `testDatabaseUrl()` from `test/db.ts` give that file's own database. `server` from `test/msw/server.ts` is the shared MSW server; register fixtures with `server.use(...)`. Any request without a handler errors (MSW 3 calls the option `onUnhandledFrame`).
 
 Next.js 16 differs from older versions: read the bundled docs in `node_modules/next/dist/docs/` before using a Next API (see `AGENTS.md`, which `next dev` maintains).
+
+## Verification
+
+`.claude/settings.json` runs `.claude/hooks/verify.sh` on `Stop` and `SubagentStop`. When there are uncommitted changes or commits not yet on main (`origin/main`, else `main`), it runs `pnpm lint && pnpm typecheck && pnpm test:unit` and blocks (exit 2, last 80 lines fed back) until they pass; a clean tree with nothing ahead of main skips it, and so does a state identical to the last passing run. After 3 consecutive blocks it lets the stop through with a warning. Emergency bypass: disable it in `/hooks`. CI also runs the integration tests, gitleaks and CodeQL.

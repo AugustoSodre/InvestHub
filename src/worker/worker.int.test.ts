@@ -68,10 +68,11 @@ async function otherConnectionCount(): Promise<number> {
   const client = new Client({ connectionString: testDatabaseUrl() });
   await client.connect();
   try {
-    const { rows } = await client.query<{ count: string }>(
-      "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid()",
+    // ::int makes the driver return a JS number (count(*) is a bigint string).
+    const { rows } = await client.query<{ count: number }>(
+      "SELECT count(*)::int AS count FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid()",
     );
-    return Number(rows[0]!.count);
+    return rows[0]!.count;
   } finally {
     await client.end();
   }

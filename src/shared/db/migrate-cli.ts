@@ -1,9 +1,9 @@
 // Entry point for `pnpm db:migrate`.
+import { serverEnv } from "../env";
 import { runMigrations } from "./migrate";
 import { retryWhileDatabaseStarts } from "./retry";
-import { databaseUrl } from "./url";
 
-const url = databaseUrl();
+const url = serverEnv().databaseUrl;
 const target = `${new URL(url).host}${new URL(url).pathname}`;
 
 // Right after `docker compose up -d` Postgres may still be initialising its
