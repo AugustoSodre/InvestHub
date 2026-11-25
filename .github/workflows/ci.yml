@@ -51,6 +51,9 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm exec playwright install --with-deps chromium
+      # Pages that read the database need the compose Postgres, migrated.
+      - run: docker compose up -d --wait
+      - run: pnpm db:migrate
       # CI=true makes the Playwright webServer build and start the production app.
       - run: pnpm test:e2e
       - if: failure()
