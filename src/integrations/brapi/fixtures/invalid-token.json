@@ -1,0 +1,5 @@
+{
+  "error": true,
+  "message": "Token de autenticação inválido",
+  "code": "INVALID_TOKEN"
+}

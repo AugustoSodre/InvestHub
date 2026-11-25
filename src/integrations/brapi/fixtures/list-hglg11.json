@@ -1,0 +1,10 @@
+{
+  "stocks": [
+    {
+      "stock": "HGLG11",
+      "name": "PÁTRIA LOG - FUNDO DE INVESTIMENTO IMOBILIÁRIO - RESPONSABILIDADE LIMITADA",
+      "type": "fund",
+      "subType": "fii"
+    }
+  ]
+}

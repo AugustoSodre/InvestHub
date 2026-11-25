@@ -1,0 +1,16 @@
+{
+  "stocks": [
+    {
+      "stock": "PETR4",
+      "name": "PETROLEO BRASILEIRO S.A. PETROBRAS",
+      "type": "stock",
+      "subType": "stock"
+    },
+    {
+      "stock": "PETR4F",
+      "name": "PETROLEO BRASILEIRO S.A. PETROBRAS",
+      "type": "stock",
+      "subType": "stock"
+    }
+  ]
+}
