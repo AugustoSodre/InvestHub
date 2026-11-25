@@ -61,7 +61,7 @@ jobs:
     timeout-minutes: 10
     env:
       # `next start` runs with NODE_ENV=production, where a missing DATABASE_URL throws.
-      DATABASE_URL: postgres://investhub:investhub@127.0.0.1:55432/investhub
+      DATABASE_URL: postgres://investhub:investhub@127.0.0.1:55432/investhub_dev
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
