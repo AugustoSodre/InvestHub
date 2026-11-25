@@ -77,7 +77,7 @@ Node 22 (`.nvmrc`), pnpm through corepack (`corepack enable`). Docker must be ru
 - `pnpm db:migrate`: apply Drizzle migrations. Retries for up to 30s while Postgres is still starting. `pnpm db:generate` creates a migration from `src/shared/db/schema.ts`.
 - `pnpm dev`: Next.js on http://localhost:3000, bound to 127.0.0.1. `pnpm build` / `pnpm start` for production.
 - `pnpm worker`: pg-boss worker (`src/worker/index.ts`). It and `db:migrate` run Node with `--conditions=react-server`, so `src/shared/env.ts` (`server-only`) loads outside Next. Create schedules only through `schedule()` in `src/worker/schedule.ts`, which sets the São Paulo time zone. Name pg-boss instances `boss` (or `*boss`): the lint rule that blocks direct `.schedule(` calls matches by that name.
-- `pnpm lint`: ESLint, including the hard rules in `tooling/eslint-hard-rules.mjs` (`process.env` only in `src/shared/env.ts`, no float parsing, no `NEXT_PUBLIC_`), then `tooling/check-env-example.mjs`. `pnpm typecheck`, `pnpm format` (`pnpm format:check` in CI).
+- `pnpm lint`: ESLint, including the hard rules in `tooling/eslint-hard-rules.mjs` (`process.env` only in `src/shared/env.ts`, no float parsing, no `NEXT_PUBLIC_`), then `tooling/check-next-public.mjs`. `pnpm typecheck`, `pnpm format` (`pnpm format:check` in CI).
 - `pnpm test`: Vitest. Project `unit` runs `*.test.ts`; project `integration` runs `*.int.test.ts` against Testcontainers Postgres. `pnpm test:unit` runs only the unit project and needs no Docker, so Testcontainers never goes in a plain `*.test.ts`. Filter with a path.
 - `pnpm test:e2e`: Playwright (`e2e/`). Starts `pnpm dev` itself, or reuses a running one. First run needs `pnpm exec playwright install chromium`.
 
