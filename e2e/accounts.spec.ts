@@ -2,10 +2,12 @@ import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { Client } from "pg";
 import { SEEDED_USER_ID } from "../src/shared/current-user";
-import { databaseUrl } from "../src/shared/db/url";
+import { e2eDatabaseUrl } from "../test/e2e-database";
 
-// The app's database may be a developer's real local one, so this spec only
-// deletes the accounts it created and skips the empty state when others exist.
+// The app's database is shared (locally `investhub_dev`, which dev use and
+// earlier runs may have filled), so this spec only deletes the accounts it
+// created and skips the empty state when others exist. The render-level test in
+// src/features/accounts covers the empty state unconditionally.
 test.describe.configure({ mode: "serial" });
 
 const suffix = randomUUID().slice(0, 8);
@@ -13,7 +15,7 @@ const XP = `XP e2e-${suffix}`;
 const AVENUE = `Avenue e2e-${suffix}`;
 
 async function query<T extends object>(text: string, values: unknown[] = []): Promise<T[]> {
-  const client = new Client({ connectionString: databaseUrl() });
+  const client = new Client({ connectionString: e2eDatabaseUrl() });
   await client.connect();
   try {
     return (await client.query<T>(text, values)).rows;
