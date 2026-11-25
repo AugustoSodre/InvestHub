@@ -21,6 +21,10 @@ describe("process.env is read only in src/shared/env.ts and root tool configs", 
     "export const token = globalThis.process.env.BRAPI_TOKEN;\n",
     'import { env } from "node:process";\nexport const token = env.BRAPI_TOKEN;\n',
     'import process from "process";\nexport const token = process.env.BRAPI_TOKEN;\n',
+    "const p = process;\nexport const token = p.env.BRAPI_TOKEN;\n",
+    'export const token = require("process").env.BRAPI_TOKEN;\n',
+    'const { env } = require("node:process");\nexport const token = env.BRAPI_TOKEN;\n',
+    'export const mod = import("node:process");\n',
   ])("flags a feature file reading the environment: %s", async (code) => {
     expect(await ruleErrors(RULE, "src/features/catalog/brapi.ts", code)).not.toHaveLength(0);
   });
@@ -64,6 +68,15 @@ describe("feature domain code gets config as arguments", () => {
     expect(errors).toHaveLength(1);
   });
 
+  it("blocks a dynamic import of src/shared/env from a domain file", async () => {
+    const errors = await ruleErrors(
+      "no-restricted-syntax",
+      "src/features/catalog/quotes.ts",
+      'export const load = () => import("@/shared/env");\n',
+    );
+    expect(errors).toHaveLength(1);
+  });
+
   it("allows it in actions.ts", async () => {
     const errors = await ruleErrors(
       "no-restricted-imports",
@@ -87,6 +100,15 @@ describe("no float parsing in src/: money goes through Decimal", () => {
     'export const p = ["1.5"].map(parseFloat);\n',
     'export const p = ["1.5"].map(Number);\n',
     'import { Decimal } from "@/shared/decimal";\nexport const p = new Decimal("1.5").toNumber();\n',
+    'export const p = globalThis.Number("1.5");\n',
+    'export const p = globalThis["Number"]("1.5");\n',
+    'export const p = window.parseInt("15", 10);\n',
+    'export const p = globalThis.parseFloat("1.5");\n',
+    'const N = Number;\nexport const p = N("1.5");\n',
+    'const { parseFloat: pf } = Number;\nexport const p = pf("1.5");\n',
+    'export const p = +"1.5";\n',
+    "declare const s: string;\nexport const p = +s;\n",
+    'import { z } from "zod";\nexport const p = z.coerce.number();\n',
   ])("flags %s", async (code) => {
     const errors = await ruleErrors(RULE, "src/features/valuation/price.ts", code);
     expect(errors).toHaveLength(1);
@@ -105,6 +127,7 @@ describe("no float parsing in src/: money goes through Decimal", () => {
         'import { Decimal, toChartNumber } from "@/shared/decimal";',
         'export const y = toChartNumber(new Decimal("1234.56"));',
         "export const ok = Number.isFinite(y) && y < Number.MAX_SAFE_INTEGER;",
+        "export const one = +1;",
         "",
       ].join("\n"),
     );

@@ -14,12 +14,22 @@ function propertyName(member) {
 const GLOBAL_OBJECTS = new Set(["globalThis", "global", "window", "self"]);
 const PROCESS_MODULES = new Set(["process", "node:process"]);
 
+/** `require("process")` or `require("node:process")`. */
+const isRequireOfProcess = (node) =>
+  node.type === "CallExpression" &&
+  node.callee.type === "Identifier" &&
+  node.callee.name === "require" &&
+  node.arguments[0]?.type === "Literal" &&
+  PROCESS_MODULES.has(node.arguments[0].value);
+
 /** @type {import("eslint").Rule.RuleModule} */
 const noProcessEnv = {
   meta: {
     type: "problem",
     messages: {
       env: "Read environment variables only in src/shared/env.ts (serverEnv()), which validates them and is server-only. Domain code takes config as arguments.",
+      alias:
+        "Don't bind the process object to another name or load it dynamically: it hides process.env reads from lint. Use process.<member> directly.",
     },
     schema: [],
   },
@@ -31,7 +41,8 @@ const noProcessEnv = {
       (node.type === "MemberExpression" &&
         propertyName(node) === "process" &&
         node.object.type === "Identifier" &&
-        GLOBAL_OBJECTS.has(node.object.name));
+        GLOBAL_OBJECTS.has(node.object.name)) ||
+      isRequireOfProcess(node);
 
     return {
       ImportDeclaration(node) {
@@ -45,13 +56,24 @@ const noProcessEnv = {
           }
         }
       },
+      ImportExpression(node) {
+        if (node.source.type === "Literal" && PROCESS_MODULES.has(node.source.value)) {
+          context.report({ node, messageId: "alias" });
+        }
+      },
       MemberExpression(node) {
         if (isProcess(node.object) && propertyName(node) === "env") {
           context.report({ node, messageId: "env" });
         }
       },
       VariableDeclarator(node) {
-        if (!node.init || !isProcess(node.init) || node.id.type !== "ObjectPattern") return;
+        if (!node.init || !isProcess(node.init)) return;
+        // `const p = process` would let `p.env` through.
+        if (node.id.type === "Identifier") {
+          context.report({ node, messageId: "alias" });
+          return;
+        }
+        if (node.id.type !== "ObjectPattern") return;
         const takesEnv = node.id.properties.some(
           (p) => p.type === "Property" && !p.computed && (p.key.name ?? p.key.value) === "env",
         );
@@ -61,7 +83,22 @@ const noProcessEnv = {
   },
 };
 
-const PARSE_GLOBALS = new Set(["parseFloat", "parseInt"]);
+const NUMBER_CONVERTERS = new Set(["Number", "parseFloat", "parseInt"]);
+// Members of Number that read or test a number without converting a string.
+const SAFE_NUMBER_MEMBERS = new Set([
+  "isFinite",
+  "isInteger",
+  "isNaN",
+  "isSafeInteger",
+  "EPSILON",
+  "MAX_SAFE_INTEGER",
+  "MIN_SAFE_INTEGER",
+  "MAX_VALUE",
+  "MIN_VALUE",
+  "NaN",
+  "NEGATIVE_INFINITY",
+  "POSITIVE_INFINITY",
+]);
 
 /** @type {import("eslint").Rule.RuleModule} */
 const noNumberParsing = {
@@ -76,38 +113,64 @@ const noNumberParsing = {
   create(context) {
     const report = (node) => context.report({ node, messageId: "parse" });
 
-    /** Is this reference to the global `Number` a conversion? `Number.isFinite` etc. stay allowed. */
-    function isNumberConversion(identifier) {
-      const parent = identifier.parent;
-      if (parent.type === "CallExpression" || parent.type === "NewExpression") {
-        // Number(x), new Number(x), or Number passed as a callback: xs.map(Number).
-        return parent.callee === identifier || parent.arguments.includes(identifier);
-      }
-      return (
+    /**
+     * `node` evaluates to the global Number, parseFloat or parseInt. Only reading
+     * a safe member such as `Number.isFinite` is allowed; anything else (a call,
+     * a callback, an alias, a destructure) can convert a string.
+     */
+    function checkConverter(node, name) {
+      const parent = node.parent;
+      const readsSafeMember =
+        name === "Number" &&
         parent.type === "MemberExpression" &&
-        parent.object === identifier &&
-        PARSE_GLOBALS.has(propertyName(parent))
-      );
+        parent.object === node &&
+        SAFE_NUMBER_MEMBERS.has(propertyName(parent));
+      if (!readsSafeMember) report(node);
     }
 
     return {
       "Program:exit"(program) {
         const globalScope = context.sourceCode.getScope(program);
-        const globals = ["Number", ...PARSE_GLOBALS];
+        const globals = [...NUMBER_CONVERTERS];
         // Declared globals hold their references; undeclared ones fall through.
         const references = new Set([
           ...globals.flatMap((name) => globalScope.set.get(name)?.references ?? []),
-          ...globalScope.through.filter((ref) => globals.includes(ref.identifier.name)),
+          ...globalScope.through.filter((ref) => NUMBER_CONVERTERS.has(ref.identifier.name)),
         ]);
-        for (const { identifier } of references) {
-          if (PARSE_GLOBALS.has(identifier.name) || isNumberConversion(identifier)) {
-            report(identifier);
-          }
+        for (const ref of references) {
+          // TypeScript type positions such as `x: Number` convert nothing.
+          if (ref.isValueReference === false) continue;
+          checkConverter(ref.identifier, ref.identifier.name);
         }
       },
-      // decimal.js's own escape hatch: Decimal#toNumber().
+      // globalThis.Number(x), window.parseInt(x), globalThis["parseFloat"](x).
+      MemberExpression(node) {
+        const name = propertyName(node);
+        if (
+          NUMBER_CONVERTERS.has(name) &&
+          node.object.type === "Identifier" &&
+          GLOBAL_OBJECTS.has(node.object.name)
+        ) {
+          checkConverter(node, name);
+        }
+      },
+      // Unary plus converts like Number(); `+1` on a numeric literal is harmless.
+      "UnaryExpression[operator='+']"(node) {
+        const { argument } = node;
+        if (!(argument.type === "Literal" && typeof argument.value === "number")) report(node);
+      },
       "CallExpression[callee.type='MemberExpression']"(node) {
-        if (propertyName(node.callee) === "toNumber") report(node.callee);
+        const callee = node.callee;
+        // decimal.js's own escape hatch: Decimal#toNumber().
+        if (propertyName(callee) === "toNumber") report(callee);
+        // zod's z.coerce.number() runs Number() on its input.
+        if (
+          propertyName(callee) === "number" &&
+          callee.object.type === "MemberExpression" &&
+          propertyName(callee.object) === "coerce"
+        ) {
+          report(callee);
+        }
       },
     };
   },

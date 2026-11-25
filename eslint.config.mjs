@@ -14,19 +14,19 @@ const NEXT_ONLY_MODULES = ["next", "next/*", "next-intl/server", "server-only", 
 
 const NEXT_FREE_MESSAGE = `Domain code in src/features must stay Next-free (ADR 0007). Only actions.ts and .tsx UI files may import ${NEXT_ONLY_MODULES.join(", ")}.`;
 
-const STATIC_NEXT_IMPORTS = {
+// src/shared/env.ts is server-only; domain functions take config as arguments instead.
+const SHARED_ENV_MESSAGE =
+  "Domain code in src/features takes config as arguments. Read it with serverEnv() in actions.ts or a worker job and pass it in.";
+
+// Static imports feature domain code may not use: Next-only modules and src/shared/env.
+const DOMAIN_RESTRICTED_IMPORTS = {
   paths: NEXT_ONLY_MODULES.filter((name) => !name.endsWith("/*")).map((name) => ({
     name,
     message: NEXT_FREE_MESSAGE,
   })),
   patterns: [
     { group: NEXT_ONLY_MODULES.filter((name) => name.endsWith("/*")), message: NEXT_FREE_MESSAGE },
-    // src/shared/env.ts is server-only; domain functions take config as arguments instead.
-    {
-      group: ["**/shared/env", "**/shared/env.ts"],
-      message:
-        "Domain code in src/features takes config as arguments. Read it with serverEnv() in actions.ts or a worker job and pass it in.",
-    },
+    { group: ["**/shared/env", "**/shared/env.ts"], message: SHARED_ENV_MESSAGE },
   ],
 };
 
@@ -40,6 +40,12 @@ const moduleRegex = (name) =>
 const DYNAMIC_NEXT_IMPORT = {
   selector: `ImportExpression[source.value=/^(${NEXT_ONLY_MODULES.map(moduleRegex).join("|")})$/]`,
   message: NEXT_FREE_MESSAGE,
+};
+
+// The dynamic-import twin of the shared/env pattern above: `import("@/shared/env")`.
+const DYNAMIC_ENV_IMPORT = {
+  selector: String.raw`ImportExpression[source.value=/(^|\u002F)shared\u002Fenv(\.ts)?$/]`,
+  message: SHARED_ENV_MESSAGE,
 };
 
 // pg-boss evaluates cron in UTC unless `tz` is set; schedule() always sets it.
@@ -98,9 +104,9 @@ const eslintConfig = defineConfig([
     files: ["src/features/**/*.{ts,mts,cts,js,mjs,cjs,jsx}"],
     ignores: ["src/features/**/actions.ts"],
     rules: {
-      "no-restricted-imports": ["error", STATIC_NEXT_IMPORTS],
+      "no-restricted-imports": ["error", DOMAIN_RESTRICTED_IMPORTS],
       // Flat config replaces a rule's options per file, so repeat DIRECT_SCHEDULE here.
-      "no-restricted-syntax": ["error", DIRECT_SCHEDULE, DYNAMIC_NEXT_IMPORT],
+      "no-restricted-syntax": ["error", DIRECT_SCHEDULE, DYNAMIC_NEXT_IMPORT, DYNAMIC_ENV_IMPORT],
     },
   },
   globalIgnores([
