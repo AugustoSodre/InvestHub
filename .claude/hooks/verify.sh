@@ -40,9 +40,32 @@ if [ -z "$(git status --porcelain)" ] && [ "$(commits_ahead)" -eq 0 ]; then
   exit 0
 fi
 
-# Consecutive-block counter. The git dir is per worktree, so agents in separate
-# worktrees keep separate counts, and the file stays out of the working tree.
-counter="$(git rev-parse --absolute-git-dir)/claude-verify-blocks"
+# State files live in the git dir: it is per worktree, so agents in separate
+# worktrees keep separate state, and nothing lands in the working tree.
+git_dir="$(git rev-parse --absolute-git-dir)"
+counter="$git_dir/claude-verify-blocks"
+passed="$git_dir/claude-verify-passed"
+
+# Hash of everything the checks read: HEAD, uncommitted changes and untracked
+# files. Read-only (hash-object without -w writes nothing).
+fingerprint() {
+  local untracked
+  untracked="$(git -c core.quotePath=false ls-files --others --exclude-standard)"
+  {
+    git rev-parse HEAD
+    git diff HEAD --binary
+    printf '%s\n' "$untracked"
+    [ -n "$untracked" ] && git hash-object --stdin-paths <<<"$untracked"
+  } 2>/dev/null | git hash-object --stdin
+}
+
+# Same state as the last passing run (a chat-only turn on a feature branch, or a
+# branch whose squash-merged commits never reach main): skip.
+state="$(fingerprint)"
+if [ -f "$passed" ] && [ "$(cat "$passed" 2>/dev/null)" = "$state" ]; then
+  exit 0
+fi
+
 blocks=0
 if [ "$stop_hook_active" = true ] && [ -f "$counter" ]; then
   blocks="$(cat "$counter" 2>/dev/null)"
@@ -70,13 +93,19 @@ done
 
 if [ -z "$failed" ]; then
   rm -f "$counter"
+  echo "$state" >"$passed"
   exit 0
 fi
+
+rm -f "$passed"
 
 if [ "$blocks" -ge "$MAX_BLOCKS" ]; then
   rm -f "$counter"
   warning="Warning: verify hook gave up after blocking $MAX_BLOCKS times in a row; 'pnpm $failed' still fails. Fix it before handing off."
-  echo "$warning" >&2
+  {
+    echo "$warning Last $TAIL_LINES lines:"
+    tail -n "$TAIL_LINES" "$output"
+  } >&2
   printf '{"systemMessage": "%s"}\n' "$warning"
   exit 0
 fi

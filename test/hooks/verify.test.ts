@@ -156,6 +156,7 @@ describe("verify hook", () => {
     const result = runHook(true, "lint");
     expect(result.status).toBe(0);
     expect(`${result.stdout}${result.stderr}`).toMatch(/warning/i);
+    expect(result.stderr).toContain("error TS2322");
   });
 
   it("starts counting again when stop_hook_active is false", () => {
@@ -170,9 +171,35 @@ describe("verify hook", () => {
     runHook(true, "lint");
     runHook(true, "lint");
     expect(runHook(true).status).toBe(0);
+    // A new change, so the passing state is not reused.
+    writeFileSync(path.join(repo, "new.ts"), "export const y = 2;\n");
     for (let i = 0; i < 3; i++) {
       expect(runHook(true, "lint").status).toBe(2);
     }
+  });
+
+  it("skips a chat-only turn when the same state already passed", () => {
+    commitOnBranch();
+    expect(runHook(false).status).toBe(0);
+    writeFileSync(log, "");
+    expect(runHook(false, "typecheck").status).toBe(0);
+    expect(ranScripts()).toEqual([]);
+  });
+
+  it("checks again once anything changes after a pass", () => {
+    commitOnBranch();
+    expect(runHook(false).status).toBe(0);
+    writeFileSync(log, "");
+    writeFileSync(path.join(repo, "new.ts"), "export const y = 2;\n");
+    expect(runHook(false, "typecheck").status).toBe(2);
+    expect(ranScripts()).toEqual(["lint", "typecheck"]);
+  });
+
+  it("does not remember a failing state", () => {
+    dirty();
+    expect(runHook(false, "lint").status).toBe(2);
+    expect(runHook(false, "lint").status).toBe(2);
+    expect(ranScripts()).toEqual(["lint", "lint"]);
   });
 
   it("keeps its counter out of the working tree", () => {
