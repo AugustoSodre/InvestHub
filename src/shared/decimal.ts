@@ -36,3 +36,12 @@ export function toDecimal(raw: string): Decimal {
 export function toDbNumeric(value: Decimal): string {
   return value.toFixed();
 }
+
+/**
+ * The only sanctioned Decimal-to-number conversion: Recharts props, display
+ * only. Never feed the result back into a calculation (see CLAUDE.md). Lint
+ * bans `Number()`, `parseFloat`, `parseInt` and `.toNumber()` everywhere else in src/.
+ */
+export function toChartNumber(value: Decimal): number {
+  return value.toNumber();
+}

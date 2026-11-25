@@ -37,6 +37,22 @@ jobs:
       # Integration tests start Postgres with Testcontainers (Docker is preinstalled on the runner).
       - run: pnpm test
 
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      # A PR scans its own commits; a push to main scans the full history.
+      - name: Scan for secrets
+        env:
+          LOG_OPTS: ${{ github.event_name == 'pull_request' && format('{0}..{1}', github.event.pull_request.base.sha, github.event.pull_request.head.sha) || '--all' }}
+        run: >-
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.30.1
+          git /repo --log-opts="$LOG_OPTS" --redact --verbose --exit-code 1
+
   e2e:
     name: Playwright
     # End-to-end tests run on main only (ADR 0006).

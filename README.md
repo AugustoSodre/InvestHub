@@ -43,6 +43,19 @@ corepack enable && pnpm install && docker compose up -d --wait && pnpm db:migrat
 
 Open http://localhost:3000. Run the background worker with `pnpm worker`. To add your own free API keys, copy `.env.example` to `.env` and fill it in. See the Commands section of [CLAUDE.md](CLAUDE.md) for tests and other scripts.
 
+### Databases: dev and real
+
+`docker compose` runs one Postgres with two databases:
+
+- `investhub_dev`: for development, experiments and coding agents. `.env.example` points `DATABASE_URL` at it, and it is also the default when `DATABASE_URL` is empty.
+- `investhub`: your real portfolio. To use it, set the database name at the end of `DATABASE_URL` in `.env` to `investhub` and run `pnpm db:migrate` once.
+
+Postgres creates `investhub_dev` (from `docker/postgres-init/`) only when the `pgdata` volume is first created. If your volume predates it, create it once without touching your data:
+
+```bash
+docker compose exec db createdb -U investhub investhub_dev
+```
+
 ## License
 
 [MIT](LICENSE)

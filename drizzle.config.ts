@@ -5,5 +5,5 @@ export default defineConfig({
   dialect: "postgresql",
   schema: "./src/shared/db/schema.ts",
   out: "./src/shared/db/migrations",
-  dbCredentials: { url: databaseUrl() },
+  dbCredentials: { url: databaseUrl(process.env) },
 });
