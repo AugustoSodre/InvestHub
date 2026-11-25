@@ -2,7 +2,7 @@
 // modules own the logic that reads and writes their tables.
 import { sql } from "drizzle-orm";
 import { pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
-import { COUNTRIES, CURRENCIES } from "./enums";
+import { ASSET_TYPES, COUNTRIES, CURRENCIES, PRICE_SOURCES } from "./enums";
 
 /**
  * v1 has a single user (the owner) and no auth. The row exists so every table
@@ -35,4 +35,28 @@ export const accounts = pgTable(
     // Names are unique per user, ignoring case: "XP" and "xp" are the same account.
     uniqueIndex("accounts_user_id_name_key").on(t.userId, sql`lower(${t.name})`),
   ],
+);
+
+export const assetType = pgEnum("asset_type", ASSET_TYPES);
+
+export const priceSource = pgEnum("price_source", PRICE_SOURCES);
+
+/**
+ * The typed asset catalog (glossary: Asset). Global, not per user: an asset is
+ * canonical, and holdings belong to users through ledger events.
+ */
+export const assets = pgTable(
+  "assets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    type: assetType("type").notNull(),
+    /** Identifies the asset within its type, e.g. `PETR4@B3` (ticker@exchange). */
+    naturalKey: text("natural_key").notNull(),
+    name: text("name").notNull(),
+    currency: currency("currency").notNull(),
+    /** Defaults from the type; the user can override it. */
+    priceSource: priceSource("price_source").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("assets_type_natural_key_key").on(t.type, t.naturalKey)],
 );
