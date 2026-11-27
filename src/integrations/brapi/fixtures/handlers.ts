@@ -14,6 +14,10 @@
 // HGLG PAX". The fixtures keep the names from the 2026-11-24 recording, so
 // tests assert on those, not on whatever brapi returns today.
 //
+// The partial searches PETR and HGLG are synthesized, not recorded: they replay
+// list-petr4.json and list-hglg11.json, standing in for brapi's longer real
+// answers so tests can tell sandbox matches (PETR4) from token-only ones (HGLG11).
+//
 // RATE_LIMITED_BODY below is synthesized, not recorded: brapi documents HTTP 429
 // with a Retry-After header but gives no example body, and we do not hammer the
 // API to provoke one. The adapter only reads the status code.
@@ -33,7 +37,13 @@ export const RATE_LIMITED_BODY = {
   code: "RATE_LIMITED",
 };
 
-const LIST_FIXTURES: Record<string, unknown> = { PETR4: petr4, HGLG11: hglg11 };
+const LIST_FIXTURES: Record<string, unknown> = {
+  PETR4: petr4,
+  HGLG11: hglg11,
+  // Synthesized (see the note above).
+  PETR: petr4,
+  HGLG: hglg11,
+};
 
 /** Search answered from the recorded fixtures; an unknown query finds nothing. */
 export const brapiListFromFixtures = http.get(BRAPI_LIST_URL, ({ request }) => {

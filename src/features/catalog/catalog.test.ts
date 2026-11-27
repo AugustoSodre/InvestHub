@@ -99,9 +99,26 @@ describe("searchAssets token flag", () => {
     expect(await searchAssets(client, "vale3")).toMatchObject({ tokenMissing: false });
   });
 
+  it("does not flag a partial query whose only matches are sandbox tickers", async () => {
+    const { client } = stubBrapi([ticker("PETR4", "stock", "stock")], { hasToken: false });
+
+    expect(await searchAssets(client, "petrobras")).toMatchObject({ tokenMissing: false });
+  });
+
+  it("flags a partial query with a match that needs a token", async () => {
+    const { client } = stubBrapi(
+      [ticker("PETR4", "stock", "stock"), ticker("PETR3", "stock", "stock")],
+      { hasToken: false },
+    );
+
+    expect(await searchAssets(client, "PETR")).toMatchObject({ tokenMissing: true });
+  });
+
   it("never flags when a token is configured", async () => {
     const { client } = stubBrapi([], { hasToken: true });
+    const { client: withMatch } = stubBrapi([ticker("HGLG11", "fund", "fii")], { hasToken: true });
 
     expect(await searchAssets(client, "HGLG11")).toMatchObject({ tokenMissing: false });
+    expect(await searchAssets(withMatch, "HGLG")).toMatchObject({ tokenMissing: false });
   });
 });

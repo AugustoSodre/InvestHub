@@ -109,6 +109,25 @@ describe("searchAssets", () => {
     // PETR4 is one of brapi's free test tickers.
     expect(await searchAssets(noToken, "PETR4")).toMatchObject({ ok: true, tokenMissing: false });
   });
+
+  it.each([
+    ["a partial query whose only match is a sandbox ticker", "PETR", false],
+    ["a partial query with a match that needs a token", "HGLG", true],
+    ["a non-sandbox query that matched nothing", "XXXX3", true],
+  ])("without a token, flags %s: %s", async (_label, query, tokenMissing) => {
+    server.use(brapiListFromFixtures);
+
+    expect(await searchAssets(createBrapiClient({}), query)).toMatchObject({
+      ok: true,
+      tokenMissing,
+    });
+  });
+
+  it("does not flag a partial query with a match that needs a token when one is configured", async () => {
+    server.use(brapiListFromFixtures);
+
+    expect(await searchAssets(brapi(), "HGLG")).toMatchObject({ ok: true, tokenMissing: false });
+  });
 });
 
 describe("addAsset", () => {

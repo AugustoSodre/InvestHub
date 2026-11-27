@@ -71,10 +71,18 @@ export async function searchAssets(
       b3Asset(typeFromBrapi(match.subType ?? match.type), match.ticker, { name: match.name }),
     );
 
-  // The query counts too: a search that found nothing (or only filtered-out
-  // tickers) for a non-sandbox ticker still needs the explanation.
-  const needsToken = [query, ...candidates.map((c) => c.ticker)].some(requiresToken);
-  return { ok: true, candidates, tokenMissing: !brapi.hasToken && needsToken };
+  return { ok: true, candidates, tokenMissing: !brapi.hasToken && needsToken(query, candidates) };
+}
+
+/**
+ * Whether what was found needs a token: any candidate outside brapi's sandbox.
+ * A partial query ("PETR", "petrobras") is not a ticker, so it only counts
+ * when nothing was found (or only filtered-out tickers): a search for a
+ * non-sandbox ticker still needs the explanation then.
+ */
+function needsToken(query: string, candidates: AssetCandidate[]): boolean {
+  if (candidates.length === 0) return requiresToken(query);
+  return candidates.some((candidate) => requiresToken(candidate.ticker));
 }
 
 /**
