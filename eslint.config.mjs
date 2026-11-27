@@ -116,6 +116,9 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "playwright-report/**",
     "test-results/**",
+    // Agent worktrees and agent-loop state: other branches' code, linted there.
+    ".claude/**",
+    ".loop/**",
   ]),
 ]);
 

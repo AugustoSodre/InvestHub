@@ -69,6 +69,8 @@ The main session orchestrates every step. Subagents cannot spawn subagents, so o
 
 Independent slices (see the dependency table in `docs/prd.md`) may run in parallel worktrees, each with its own implementer dispatched by the main session.
 
+Unattended alternative: `tooling/agent-loop/loop.sh` is a bash orchestrator that runs the same steps with headless `claude -p` sessions (implement, review, fix), one issue at a time, picking the lowest open `slice` issue whose `Blocked by #N` issues are closed. It tracks state with the labels `agent:wip`, `agent:pr` and `agent:stuck`, tends its open PRs (conflicts, failing CI, review comments), and never merges. Setup and flags: `tooling/agent-loop/README.md`. When the loop runs you, you are headless: nobody answers questions, and the loop pushes and opens the PR, not you.
+
 ## Commands
 
 Node 22 (`.nvmrc`), pnpm through corepack (`corepack enable`). Docker must be running for the database and for integration tests.
