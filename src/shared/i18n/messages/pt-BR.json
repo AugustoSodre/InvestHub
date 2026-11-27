@@ -49,5 +49,86 @@
       "invalid": "Selecione uma opção válida.",
       "duplicate": "Conta já existe."
     }
+  },
+  "catalog": {
+    "title": "Ativos",
+    "description": "Catálogo dos ativos que você pode registrar na carteira.",
+    "empty": {
+      "title": "Nenhum ativo no catálogo",
+      "description": "Busque um ticker da B3, como PETR4 ou HGLG11, ou adicione um ativo manualmente."
+    },
+    "list": {
+      "title": "Ativos do catálogo",
+      "naturalKey": "Código",
+      "name": "Nome",
+      "type": "Tipo",
+      "currency": "Moeda",
+      "priceSource": "Fonte de preço"
+    },
+    "search": {
+      "title": "Buscar na B3",
+      "label": "Ticker ou nome",
+      "placeholder": "Ex.: PETR4",
+      "submit": "Buscar",
+      "submitting": "Buscando…",
+      "results": "Resultados da busca",
+      "noResults": "Nenhum ativo encontrado para {query}.",
+      "pick": "Usar {ticker}"
+    },
+    "searchErrors": {
+      "rateLimited": "A brapi atingiu o limite de consultas. Tente de novo em alguns minutos ou adicione o ativo manualmente abaixo.",
+      "unavailable": "Não foi possível consultar a brapi agora. Tente de novo mais tarde ou adicione o ativo manualmente abaixo.",
+      "tokenMissing": "A brapi exige um token para esta busca. Defina BRAPI_TOKEN no arquivo .env com seu token gratuito da brapi.dev e reinicie o app. Enquanto isso, adicione o ativo manualmente abaixo.",
+      "tokenInvalid": "A brapi recusou o BRAPI_TOKEN definido no arquivo .env. Confira o token e reinicie o app. Enquanto isso, adicione o ativo manualmente abaixo."
+    },
+    "tokenNotice": "A busca funciona sem token, mas os preços de ativos além de PETR4, VALE3, MGLU3 e ITUB4 exigem um token da brapi. Defina BRAPI_TOKEN no arquivo .env com seu token gratuito da brapi.dev e reinicie o app.",
+    "form": {
+      "title": "Adicionar ativo",
+      "description": "Escolha um resultado da busca ou preencha os campos manualmente.",
+      "ticker": "Ticker",
+      "tickerPlaceholder": "Ex.: PETR4",
+      "name": "Nome",
+      "namePlaceholder": "Opcional: em branco, usa o ticker",
+      "type": "Tipo",
+      "priceSource": "Fonte de preço",
+      "submit": "Adicionar ativo",
+      "submitting": "Adicionando…",
+      "created": "{key} adicionado ao catálogo.",
+      "reused": "{key} já estava no catálogo.",
+      "reusedKept": "{key} já estava no catálogo. Os valores existentes foram mantidos."
+    },
+    "type": {
+      "BR_STOCK": "Ação (B3)",
+      "FII": "FII",
+      "BDR": "BDR",
+      "BR_ETF": "ETF (B3)",
+      "US_STOCK": "Ação (EUA)",
+      "US_ETF": "ETF (EUA)",
+      "CRYPTO": "Cripto",
+      "INVESTMENT_FUND": "Fundo de investimento",
+      "TESOURO": "Tesouro Direto",
+      "CDB": "CDB",
+      "LCI": "LCI",
+      "LCA": "LCA",
+      "LC": "LC",
+      "CRI": "CRI",
+      "CRA": "CRA"
+    },
+    "priceSource": {
+      "brapi": "brapi",
+      "yahoo": "Yahoo Finance",
+      "finnhub": "Finnhub",
+      "coingecko": "CoinGecko",
+      "cvm": "CVM",
+      "tesouro-transparente": "Tesouro Transparente",
+      "calculator": "Calculadora de renda fixa"
+    },
+    "errors": {
+      "required": "Campo obrigatório.",
+      "tooLong": "Use no máximo {max} caracteres.",
+      "invalid": "Selecione uma opção válida.",
+      "tickerInvalid": "Use um ticker da B3, como PETR4 ou HGLG11.",
+      "typeConflict": "{key} já está no catálogo como {type}."
+    }
   }
 }
