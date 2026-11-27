@@ -152,6 +152,37 @@ describe("addAsset", () => {
     expect(await storedAssets()).toHaveLength(1);
   });
 
+  it("refuses HGLG11@B3 as BR_STOCK when it is already in the catalog as FII", async () => {
+    const first = await addAsset(db, { type: "FII", ticker: "HGLG11" });
+
+    const second = await addAsset(db, { type: "BR_STOCK", ticker: "HGLG11" });
+
+    expect(first).toMatchObject({ ok: true, created: true });
+    expect(second).toEqual({
+      ok: false,
+      fieldErrors: { type: "typeConflict" },
+      conflict: { naturalKey: "HGLG11@B3", type: "FII" },
+    });
+    expect(await storedAssets()).toEqual([
+      expect.objectContaining({ type: "FII", naturalKey: "HGLG11@B3" }),
+    ]);
+  });
+
+  it("keeps one asset per natural key when two types are added concurrently", async () => {
+    const results = await Promise.all([
+      addAsset(db, { type: "FII", ticker: "HGLG11" }),
+      addAsset(db, { type: "BR_STOCK", ticker: "HGLG11" }),
+    ]);
+
+    const created = results.filter((r) => r.ok && r.created);
+    const conflicts = results.filter((r) => !r.ok && r.fieldErrors.type === "typeConflict");
+    expect(created).toHaveLength(1);
+    expect(conflicts).toHaveLength(1);
+    const rows = await storedAssets();
+    expect(rows).toHaveLength(1);
+    expect(conflicts[0]).toMatchObject({ conflict: { type: rows[0]?.type } });
+  });
+
   it("stores HGLG11 with the type overridden from FII to BR_STOCK", async () => {
     server.use(brapiListFromFixtures);
     const search = await searchAssets(brapi(), "HGLG11");

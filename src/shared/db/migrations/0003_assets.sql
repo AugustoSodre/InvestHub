@@ -10,4 +10,4 @@ CREATE TABLE "assets" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX "assets_type_natural_key_key" ON "assets" USING btree ("type","natural_key");
+CREATE UNIQUE INDEX "assets_natural_key_key" ON "assets" USING btree ("natural_key");

@@ -126,7 +126,8 @@
       "required": "Campo obrigatório.",
       "tooLong": "Use no máximo {max} caracteres.",
       "invalid": "Selecione uma opção válida.",
-      "tickerInvalid": "Use um ticker da B3, como PETR4 ou HGLG11."
+      "tickerInvalid": "Use um ticker da B3, como PETR4 ou HGLG11.",
+      "typeConflict": "{key} já está no catálogo como {type}."
     }
   }
 }

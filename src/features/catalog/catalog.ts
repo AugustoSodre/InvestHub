@@ -1,6 +1,7 @@
-import { and, asc, eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { requiresToken, type BrapiClient, type BrapiError } from "@/integrations/brapi/brapi";
 import type { Database } from "@/shared/db/client";
+import type { AssetType } from "@/shared/db/enums";
 import { assets } from "@/shared/db/schema";
 import {
   B3_TICKER,
@@ -29,7 +30,13 @@ export type SearchAssetsResult =
   | { ok: false; fieldErrors: SearchFieldErrors };
 
 export type AddAssetResult =
-  { ok: true; asset: Asset; created: boolean } | { ok: false; fieldErrors: AssetFieldErrors };
+  | { ok: true; asset: Asset; created: boolean }
+  | {
+      ok: false;
+      fieldErrors: AssetFieldErrors;
+      /** Set with the "typeConflict" error: the natural key is already stored under this type. */
+      conflict?: { naturalKey: string; type: AssetType };
+    };
 
 /**
  * Validates an untrusted query, searches B3 tickers on brapi and turns each
@@ -80,8 +87,10 @@ function typeFromBrapi(subType: string): AddableAssetType {
 
 /**
  * Validates untrusted input (form fields or a search candidate) and adds the
- * asset to the catalog. If an asset with the same type and natural key exists,
- * it is returned unchanged (`created: false`) instead of a duplicate.
+ * asset to the catalog. A natural key identifies one instrument: if it is
+ * already stored with the same type, that asset is returned unchanged
+ * (`created: false`); under another type, nothing is added and a
+ * "typeConflict" error names the stored type.
  */
 export async function addAsset(db: Database, input: unknown): Promise<AddAssetResult> {
   const parsed = parseAssetInput(input);
@@ -92,19 +101,23 @@ export async function addAsset(db: Database, input: unknown): Promise<AddAssetRe
   const [inserted] = await db
     .insert(assets)
     .values({ type, naturalKey, name, currency, priceSource })
-    .onConflictDoNothing({ target: [assets.type, assets.naturalKey] })
+    .onConflictDoNothing({ target: assets.naturalKey })
     .returning();
   if (inserted) return { ok: true, asset: inserted, created: true };
 
-  const [existing] = await db
-    .select()
-    .from(assets)
-    .where(and(eq(assets.type, type), eq(assets.naturalKey, naturalKey)));
+  const [existing] = await db.select().from(assets).where(eq(assets.naturalKey, naturalKey));
   if (!existing) throw new Error(`Asset ${naturalKey} conflicted but was not found.`);
+  if (existing.type !== type) {
+    return {
+      ok: false,
+      fieldErrors: { type: "typeConflict" },
+      conflict: { naturalKey, type: existing.type },
+    };
+  }
   return { ok: true, asset: existing, created: false };
 }
 
 /** Every asset in the catalog, sorted by natural key. */
 export async function listAssets(db: Database): Promise<Asset[]> {
-  return db.select().from(assets).orderBy(asc(assets.naturalKey), asc(assets.type));
+  return db.select().from(assets).orderBy(asc(assets.naturalKey));
 }

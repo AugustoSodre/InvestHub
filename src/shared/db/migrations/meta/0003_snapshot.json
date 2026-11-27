@@ -1,5 +1,5 @@
 {
-  "id": "8fac9f5f-b1c5-47b3-8ae6-240ffb2bdfad",
+  "id": "883026a9-727d-4e82-b6a4-7ceeebcecb22",
   "prevId": "4134ebf2-a459-424a-b617-7ab68c0a15a9",
   "version": "7",
   "dialect": "postgresql",
@@ -152,15 +152,9 @@
         }
       },
       "indexes": {
-        "assets_type_natural_key_key": {
-          "name": "assets_type_natural_key_key",
+        "assets_natural_key_key": {
+          "name": "assets_natural_key_key",
           "columns": [
-            {
-              "expression": "type",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
             {
               "expression": "natural_key",
               "isExpression": false,

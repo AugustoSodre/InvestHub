@@ -17,9 +17,16 @@ const INITIAL_STATE: AddAssetFormState = { status: "idle" };
  * filled in by hand (for example while brapi is down). Type and price source
  * can be overridden either way.
  */
-export function AddAssetForm({ initial }: { initial: Record<AssetField, string> }) {
+export function AddAssetForm({
+  initial,
+  initialState = INITIAL_STATE,
+}: {
+  initial: Record<AssetField, string>;
+  /** The form's state before any submit; tests render the outcomes of a submit through it. */
+  initialState?: AddAssetFormState;
+}) {
   const t = useTranslations("catalog");
-  const [state, formAction, pending] = useActionState(addAssetAction, INITIAL_STATE);
+  const [state, formAction, pending] = useActionState(addAssetAction, initialState);
 
   const values = state.status === "invalid" ? state.values : initial;
   const fieldErrors = state.status === "invalid" ? state.fieldErrors : {};
@@ -40,12 +47,14 @@ export function AddAssetForm({ initial }: { initial: Record<AssetField, string> 
   const errorFor = (field: AssetField) => {
     const code = fieldErrors[field];
     if (!code) return null;
-    const key = field === "ticker" && code === "invalid" ? "tickerInvalid" : code;
-    return (
-      <FieldError id={`asset-${field}-error`}>
-        {t(`errors.${key}`, { max: ASSET_NAME_MAX_LENGTH })}
-      </FieldError>
-    );
+    const conflict = state.status === "invalid" ? state.conflict : undefined;
+    const message =
+      code === "typeConflict" && conflict
+        ? t("errors.typeConflict", { key: conflict.naturalKey, type: t(`type.${conflict.type}`) })
+        : t(`errors.${field === "ticker" && code === "invalid" ? "tickerInvalid" : code}`, {
+            max: ASSET_NAME_MAX_LENGTH,
+          });
+    return <FieldError id={`asset-${field}-error`}>{message}</FieldError>;
   };
 
   return (

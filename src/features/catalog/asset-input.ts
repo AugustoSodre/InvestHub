@@ -72,12 +72,17 @@ export function b3Asset(
   };
 }
 
-/** Error codes, not messages: the UI turns each into PT-BR text through i18n. */
-export type AssetFieldErrorCode = "required" | "tooLong" | "invalid";
+/**
+ * Error codes, not messages: the UI turns each into PT-BR text through i18n.
+ * "typeConflict" comes from the catalog, not the schema: the natural key is
+ * already stored under another type.
+ */
+export type AssetFieldErrorCode = "required" | "tooLong" | "invalid" | "typeConflict";
 const ERROR_CODES: readonly string[] = [
   "required",
   "tooLong",
   "invalid",
+  "typeConflict",
 ] satisfies readonly AssetFieldErrorCode[];
 
 /** A text field: missing is "required", anything other than a string is "invalid". */

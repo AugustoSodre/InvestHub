@@ -50,7 +50,10 @@ export const assets = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     type: assetType("type").notNull(),
-    /** Identifies the asset within its type, e.g. `PETR4@B3` (ticker@exchange). */
+    /**
+     * Identifies one instrument, e.g. `PETR4@B3` (ticker@exchange). Unique on
+     * its own, not per type: HGLG11@B3 is one asset, whatever type it was given.
+     */
     naturalKey: text("natural_key").notNull(),
     name: text("name").notNull(),
     currency: currency("currency").notNull(),
@@ -58,5 +61,5 @@ export const assets = pgTable(
     priceSource: priceSource("price_source").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("assets_type_natural_key_key").on(t.type, t.naturalKey)],
+  (t) => [uniqueIndex("assets_natural_key_key").on(t.naturalKey)],
 );

@@ -4,7 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
 import { DEFAULT_LOCALE, TIME_ZONE } from "@/shared/i18n/config";
 import messages from "@/shared/i18n/messages/pt-BR.json";
-import type { SearchAssetsFormState } from "./actions";
+import type { AddAssetFormState, SearchAssetsFormState } from "./actions";
 import { AddAssetForm } from "./add-asset-form";
 import { SearchOutcome } from "./asset-search";
 import type { Asset, AssetCandidate } from "./catalog";
@@ -176,5 +176,27 @@ describe("AddAssetForm after picking a search result", () => {
 
     expect(html).toMatch(/<option[^>]*value="BR_STOCK" selected=""/);
     expect(html).toMatch(/<option[^>]*value="brapi" selected=""/);
+  });
+});
+
+describe("AddAssetForm after submitting", () => {
+  const typed = { ticker: "HGLG11", name: "", type: "BR_STOCK", priceSource: "brapi" };
+
+  function renderSubmitted(state: AddAssetFormState): string {
+    return renderWithMessages(
+      createElement(AddAssetForm, { initial: formValuesFor(null), initialState: state }),
+    );
+  }
+
+  it("says the key is already in the catalog under another type, next to the type", () => {
+    const html = renderSubmitted({
+      status: "invalid",
+      fieldErrors: { type: "typeConflict" },
+      conflict: { naturalKey: "HGLG11@B3", type: "FII" },
+      values: typed,
+    });
+
+    expect(html).toContain("HGLG11@B3 já está no catálogo como FII.");
+    expect(html).toMatch(/<select[^>]*aria-invalid="true"[^>]*aria-describedby="asset-type-error"/);
   });
 });

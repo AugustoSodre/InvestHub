@@ -46,7 +46,7 @@ Domain terms as used in this codebase. Brazilian market terms keep their Portugu
 
 **Alert**: a notification raised by the worker when a rule fires for a held asset: daily move beyond the threshold (default ±5%), a fato relevante or earnings, or a dividend/JCP announcement. Delivered in-app and via Telegram.
 
-**Asset**: an entry in the typed catalog, identified by type plus natural key (ticker@exchange, CoinGecko id, CNPJ, or fixed-income terms). Carries its price source, which the user can override.
+**Asset**: an entry in the typed catalog, identified by its natural key (ticker@exchange, CoinGecko id, CNPJ, or fixed-income terms), which is unique across types. Carries its price source, which the user can override.
 
 **Digest**: the weekly AI-written summary (Monday 07:00 BRT, PT-BR) of portfolio change, top movers with cited news and upcoming events. Stored for history.
 

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createBrapiClient, type BrapiError } from "@/integrations/brapi/brapi";
 import { appDb } from "@/shared/db/app-db";
+import type { AssetType } from "@/shared/db/enums";
 import { serverEnv } from "@/shared/env";
 import {
   ASSET_FIELDS,
@@ -24,6 +25,8 @@ export type AddAssetFormState =
   | {
       status: "invalid";
       fieldErrors: AssetFieldErrors;
+      /** With a "typeConflict" error: the key and the type it is already stored under. */
+      conflict?: { naturalKey: string; type: AssetType };
       /** What the user typed, so the form can show it again next to the errors. */
       values: Record<AssetField, string>;
     };
@@ -65,7 +68,14 @@ export async function addAssetAction(
   ) as Record<AssetField, string>;
 
   const result = await addAsset(appDb(), values);
-  if (!result.ok) return { status: "invalid", fieldErrors: result.fieldErrors, values };
+  if (!result.ok) {
+    return {
+      status: "invalid",
+      fieldErrors: result.fieldErrors,
+      conflict: result.conflict,
+      values,
+    };
+  }
 
   // The catalog page lives at src/app/ativos.
   revalidatePath("/ativos");
