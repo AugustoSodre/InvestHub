@@ -9,6 +9,7 @@ import {
   ASSET_FIELDS,
   type AssetField,
   type AssetFieldErrors,
+  type DefaultedField,
   type SearchFieldErrors,
 } from "./asset-input";
 import { addAsset, searchAssets, type AssetCandidate } from "./catalog";
@@ -21,7 +22,13 @@ export type SearchAssetsFormState =
 
 export type AddAssetFormState =
   | { status: "idle" }
-  | { status: "saved"; naturalKey: string; created: boolean }
+  | {
+      status: "saved";
+      naturalKey: string;
+      created: boolean;
+      /** Submitted fields that differed from the existing asset, which was kept as is. */
+      ignored: DefaultedField[];
+    }
   | {
       status: "invalid";
       fieldErrors: AssetFieldErrors;
@@ -79,5 +86,10 @@ export async function addAssetAction(
 
   // The catalog page lives at src/app/ativos.
   revalidatePath("/ativos");
-  return { status: "saved", naturalKey: result.asset.naturalKey, created: result.created };
+  return {
+    status: "saved",
+    naturalKey: result.asset.naturalKey,
+    created: result.created,
+    ignored: result.ignored,
+  };
 }

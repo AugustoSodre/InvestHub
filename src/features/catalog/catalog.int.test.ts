@@ -126,7 +126,12 @@ describe("addAsset", () => {
       currency: "BRL",
       priceSource: "brapi",
     };
-    expect(result).toEqual({ ok: true, created: true, asset: expect.objectContaining(expected) });
+    expect(result).toEqual({
+      ok: true,
+      created: true,
+      ignored: [],
+      asset: expect.objectContaining(expected),
+    });
     const rows = await storedAssets();
     expect(rows).toEqual([expect.objectContaining(expected)]);
     expect(rows[0]?.createdAt).toBeInstanceOf(Date);
@@ -142,6 +147,39 @@ describe("addAsset", () => {
     expect(second.ok && first.ok && second.asset.id).toBe(first.ok && first.asset.id);
     expect(await storedAssets()).toEqual([expect.objectContaining({ name: PETROBRAS })]);
   });
+
+  it("reports nothing ignored for a new asset", async () => {
+    expect(await addAsset(db, { type: "BR_STOCK", ticker: "PETR4" })).toMatchObject({
+      ok: true,
+      created: true,
+      ignored: [],
+    });
+  });
+
+  it.each([
+    ["a different name", { name: "Outro" }, ["name"]],
+    ["a different price source", { priceSource: "yahoo" }, ["priceSource"]],
+    [
+      "a different name and price source",
+      { name: "Outro", priceSource: "yahoo" },
+      ["name", "priceSource"],
+    ],
+    ["the stored name and price source", { name: ` ${PETROBRAS} `, priceSource: "brapi" }, []],
+    ["a blank name and price source", { name: " ", priceSource: "" }, []],
+    ["no name or price source", {}, []],
+  ])(
+    "keeps the stored asset when re-added with %s, reporting what was not applied",
+    async (_label, fields, ignored) => {
+      await addAsset(db, { type: "BR_STOCK", ticker: "PETR4", name: PETROBRAS });
+
+      const result = await addAsset(db, { type: "BR_STOCK", ticker: "PETR4", ...fields });
+
+      expect(result).toMatchObject({ ok: true, created: false, ignored });
+      expect(await storedAssets()).toEqual([
+        expect.objectContaining({ name: PETROBRAS, priceSource: "brapi" }),
+      ]);
+    },
+  );
 
   it("reuses the existing asset when the same ticker is added concurrently", async () => {
     const input = { type: "BR_STOCK", ticker: "PETR4", name: PETROBRAS };

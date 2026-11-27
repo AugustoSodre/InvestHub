@@ -11,6 +11,7 @@ import {
   type AddableAssetType,
   type AssetCandidate,
   type AssetFieldErrors,
+  type DefaultedField,
   type SearchFieldErrors,
 } from "./asset-input";
 
@@ -30,7 +31,16 @@ export type SearchAssetsResult =
   | { ok: false; fieldErrors: SearchFieldErrors };
 
 export type AddAssetResult =
-  | { ok: true; asset: Asset; created: boolean }
+  | {
+      ok: true;
+      asset: Asset;
+      created: boolean;
+      /**
+       * Given fields that differ from the asset already stored, which was kept
+       * as is. Empty when the asset was created, or the given fields match.
+       */
+      ignored: DefaultedField[];
+    }
   | {
       ok: false;
       fieldErrors: AssetFieldErrors;
@@ -89,7 +99,8 @@ function typeFromBrapi(subType: string): AddableAssetType {
  * Validates untrusted input (form fields or a search candidate) and adds the
  * asset to the catalog. A natural key identifies one instrument: if it is
  * already stored with the same type, that asset is returned unchanged
- * (`created: false`); under another type, nothing is added and a
+ * (`created: false`, with any given name or price source that differs listed
+ * in `ignored`); under another type, nothing is added and a
  * "typeConflict" error names the stored type.
  */
 export async function addAsset(db: Database, input: unknown): Promise<AddAssetResult> {
@@ -103,7 +114,7 @@ export async function addAsset(db: Database, input: unknown): Promise<AddAssetRe
     .values({ type, naturalKey, name, currency, priceSource })
     .onConflictDoNothing({ target: assets.naturalKey })
     .returning();
-  if (inserted) return { ok: true, asset: inserted, created: true };
+  if (inserted) return { ok: true, asset: inserted, created: true, ignored: [] };
 
   const [existing] = await db.select().from(assets).where(eq(assets.naturalKey, naturalKey));
   if (!existing) throw new Error(`Asset ${naturalKey} conflicted but was not found.`);
@@ -114,8 +125,14 @@ export async function addAsset(db: Database, input: unknown): Promise<AddAssetRe
       conflict: { naturalKey, type: existing.type },
     };
   }
-  return { ok: true, asset: existing, created: false };
+  // No editing yet: the stored values stay, and the caller learns which given ones did not apply.
+  const ignored = DEFAULTED_FIELDS.filter(
+    (field) => parsed.given[field] !== undefined && parsed.given[field] !== existing[field],
+  );
+  return { ok: true, asset: existing, created: false, ignored };
 }
+
+const DEFAULTED_FIELDS: readonly DefaultedField[] = ["name", "priceSource"];
 
 /** Every asset in the catalog, sorted by natural key. */
 export async function listAssets(db: Database): Promise<Asset[]> {

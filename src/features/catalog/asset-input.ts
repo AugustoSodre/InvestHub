@@ -127,8 +127,17 @@ export const ASSET_FIELDS: readonly AssetField[] = assetInput.keyof().options;
 export type AssetFieldErrors = Partial<Record<AssetField, AssetFieldErrorCode>>;
 export type SearchFieldErrors = { query: AssetFieldErrorCode };
 
+/** Fields with a default: left blank, the default applies; given, they can differ from a stored asset. */
+export type DefaultedField = "name" | "priceSource";
+
 export type ParsedAssetInput =
-  { ok: true; data: AssetCandidate } | { ok: false; fieldErrors: AssetFieldErrors };
+  | {
+      ok: true;
+      data: AssetCandidate;
+      /** The defaulted fields the input actually gave, parsed; blank ones are left out. */
+      given: Partial<Pick<AssetValues, DefaultedField>>;
+    }
+  | { ok: false; fieldErrors: AssetFieldErrors };
 
 export type ParsedSearchInput =
   { ok: true; query: string } | { ok: false; fieldErrors: SearchFieldErrors };
@@ -143,7 +152,11 @@ export function parseAssetInput(input: unknown): ParsedAssetInput {
   if (!parsed.success) return { ok: false, fieldErrors: fieldErrorsOf(parsed.error) };
 
   const { type, ticker, name, priceSource } = parsed.data;
-  return { ok: true, data: b3Asset(type, ticker, { name, priceSource }) };
+  const given = {
+    ...(name === undefined ? {} : { name }),
+    ...(priceSource === undefined ? {} : { priceSource }),
+  };
+  return { ok: true, data: b3Asset(type, ticker, given), given };
 }
 
 /** Parses an untrusted ticker search: trimmed, upper-cased, not blank, not too long. */

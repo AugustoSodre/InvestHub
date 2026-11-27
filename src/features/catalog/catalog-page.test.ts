@@ -199,4 +199,27 @@ describe("AddAssetForm after submitting", () => {
     expect(html).toContain("HGLG11@B3 já está no catálogo como FII.");
     expect(html).toMatch(/<select[^>]*aria-invalid="true"[^>]*aria-describedby="asset-type-error"/);
   });
+
+  it("says the key was already in the catalog when nothing submitted differed", () => {
+    const html = renderSubmitted({
+      status: "saved",
+      naturalKey: "PETR4@B3",
+      created: false,
+      ignored: [],
+    });
+
+    expect(html).toContain("PETR4@B3 já estava no catálogo.");
+    expect(html).not.toContain("mantidos");
+  });
+
+  it("says the existing values were kept when the submitted ones differed", () => {
+    const html = renderSubmitted({
+      status: "saved",
+      naturalKey: "PETR4@B3",
+      created: false,
+      ignored: ["name", "priceSource"],
+    });
+
+    expect(html).toContain("PETR4@B3 já estava no catálogo. Os valores existentes foram mantidos.");
+  });
 });

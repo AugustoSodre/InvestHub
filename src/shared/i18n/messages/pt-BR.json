@@ -94,7 +94,8 @@
       "submit": "Adicionar ativo",
       "submitting": "Adicionando…",
       "created": "{key} adicionado ao catálogo.",
-      "reused": "{key} já estava no catálogo."
+      "reused": "{key} já estava no catálogo.",
+      "reusedKept": "{key} já estava no catálogo. Os valores existentes foram mantidos."
     },
     "type": {
       "BR_STOCK": "Ação (B3)",

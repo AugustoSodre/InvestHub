@@ -119,11 +119,16 @@ export function AddAssetForm({
           </Button>
           <p role="status" className="text-sm text-muted-foreground">
             {state.status === "saved" && !pending
-              ? t(state.created ? "form.created" : "form.reused", { key: state.naturalKey })
+              ? t(savedMessage(state), { key: state.naturalKey })
               : null}
           </p>
         </div>
       </FieldGroup>
     </form>
   );
+}
+
+function savedMessage(state: Extract<AddAssetFormState, { status: "saved" }>) {
+  if (state.created) return "form.created";
+  return state.ignored.length > 0 ? "form.reusedKept" : "form.reused";
 }
