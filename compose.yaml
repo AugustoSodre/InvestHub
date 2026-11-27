@@ -1,3 +1,7 @@
+# Fixed project name: without it, `docker compose` in a git worktree starts a
+# second project named after the folder, which fights over port 55432.
+name: investhub
+
 services:
   db:
     # Keep in sync with POSTGRES_IMAGE in test/setup/postgres-global.ts.
