@@ -116,5 +116,7 @@ export const ledgerEvents = pgTable(
     status: ledgerEventStatus("status").notNull().default("CONFIRMED"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("ledger_events_user_id_account_id_asset_id_idx").on(t.userId, t.accountId, t.assetId)],
+  (t) => [
+    index("ledger_events_user_id_account_id_asset_id_idx").on(t.userId, t.accountId, t.assetId),
+  ],
 );

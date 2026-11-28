@@ -99,7 +99,8 @@ export type BuyField = keyof BuyInput;
 export const BUY_FIELDS: readonly BuyField[] = buyInput("").keyof().options;
 export type BuyFieldErrors = Partial<Record<BuyField, BuyFieldErrorCode>>;
 
-export type ParsedBuyInput = { ok: true; data: BuyInput } | { ok: false; fieldErrors: BuyFieldErrors };
+export type ParsedBuyInput =
+  { ok: true; data: BuyInput } | { ok: false; fieldErrors: BuyFieldErrors };
 
 /**
  * Parses an untrusted buy (e.g. form fields) and reports one error per field.

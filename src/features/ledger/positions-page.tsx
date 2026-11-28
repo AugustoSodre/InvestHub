@@ -80,7 +80,11 @@ export async function PositionsPage({ positions, accounts, assets, today }: Posi
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {accounts.length === 0 ? (
-            <Prerequisite text={t("buy.needsAccount")} href="/contas" link={t("buy.goToAccounts")} />
+            <Prerequisite
+              text={t("buy.needsAccount")}
+              href="/contas"
+              link={t("buy.goToAccounts")}
+            />
           ) : null}
           {assets.length === 0 ? (
             <Prerequisite text={t("buy.needsAsset")} href="/ativos" link={t("buy.goToCatalog")} />
