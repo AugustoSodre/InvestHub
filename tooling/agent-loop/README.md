@@ -42,7 +42,19 @@ tooling/agent-loop/loop.sh --once             # one tick, to watch it the first 
 tmux new -s loop 'tooling/agent-loop/loop.sh' # unattended; detach with Ctrl+B D
 ```
 
-Flags: `--max-issues N`, `--poll SECONDS` (default 600), `--budget USD` per Claude session (default 15), `--model NAME`.
+## Parallel workers
+
+Once several issues are ready at the same time (say, after one merge unblocks three), add workers. Run exactly **one** normal loop, plus any number of `--worker` loops on the same machine:
+
+```sh
+tmux new -s loop     'tooling/agent-loop/loop.sh'
+tmux new -s worker-1 'tooling/agent-loop/loop.sh --worker'
+tmux new -s worker-2 'tooling/agent-loop/loop.sh --worker'
+```
+
+A worker only claims and implements issues. It never tends PRs: two loops tending the same PR would run fix sessions in the same worktree. Each loop claims the lowest ready issue the others have not taken, under a local lock in `.loop/locks/`, and git operations that write the shared `.git` (fetch, worktrees, push, commit rewrites) take turns. Locks are per machine, which is one more reason to run on one machine only. Each worker runs its own `pnpm test` with its own Testcontainers Postgres, so budget CPU and memory per worker.
+
+Flags: `--worker`, `--max-issues N`, `--poll SECONDS` (default 600), `--budget USD` per Claude session (default 15), `--model NAME`.
 
 **Stop** with Ctrl+C. The current issue loses its `agent:wip` label and keeps its worktree; the next run resumes from the commits already there.
 
