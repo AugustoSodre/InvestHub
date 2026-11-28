@@ -27,6 +27,25 @@ export const ASSET_TYPES = [
 ] as const;
 export type AssetType = (typeof ASSET_TYPES)[number];
 
+/**
+ * Every ledger event type (glossary: Ledger event), declared up front so later
+ * slices don't need an enum migration. Only BUY can be recorded so far.
+ */
+export const LEDGER_EVENT_TYPES = [
+  "BUY",
+  "SELL",
+  "DIVIDEND",
+  "JCP",
+  "SPLIT",
+  "BONUS",
+  "FEE",
+] as const;
+export type LedgerEventType = (typeof LEDGER_EVENT_TYPES)[number];
+
+/** PENDING events are worker suggestions, not part of the ledger until the user confirms them. */
+export const LEDGER_EVENT_STATUSES = ["CONFIRMED", "PENDING"] as const;
+export type LedgerEventStatus = (typeof LEDGER_EVENT_STATUSES)[number];
+
 /** Where an asset's price comes from. `calculator` is the fixed-income accrual, not a feed. */
 export const PRICE_SOURCES = [
   "brapi",
