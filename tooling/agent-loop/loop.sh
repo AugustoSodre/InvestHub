@@ -6,13 +6,19 @@
 # "Blocked by #N" issues are all closed, implements it in its own git worktree,
 # reviews it in a separate session, fixes, and opens a PR.
 #
+# With --worker it skips the PR tending and only implements, so several loops
+# can run side by side on one machine: one normal loop plus any number of
+# workers. Claims and shared git operations go through local locks.
+#
 # It never merges. The human merges, and the merge closes the issue through
 # "Closes #N", which is what unblocks the issues that depend on it.
 # Setup and usage: tooling/agent-loop/README.md.
 set -euo pipefail
 
 LOOP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(git -C "$LOOP_DIR" rev-parse --show-toplevel)"
+# The main checkout, even when this script runs from a worktree, so every loop
+# on the machine shares one .loop/ (locks, logs) and one worktree folder.
+REPO_ROOT="$(dirname "$(git -C "$LOOP_DIR" rev-parse --path-format=absolute --git-common-dir)")"
 STATE_DIR="$REPO_ROOT/.loop"
 LOG_DIR="$STATE_DIR/logs"
 WT_ROOT="$REPO_ROOT/.claude/worktrees"
@@ -30,7 +36,9 @@ SESSION_TIMEOUT=5400
 MAX_REVIEW_ROUNDS=3
 MAX_FIX_ATTEMPTS=2
 MAX_STUCK_STREAK=2
+LOCK_WAIT=900
 ONCE=false
+WORKER=false
 DRY_RUN=false
 PREFLIGHT_ONLY=false
 
@@ -49,6 +57,7 @@ Usage: tooling/agent-loop/loop.sh [options]
   --preflight        check that this machine is ready, then exit
   --dry-run          show each open slice issue, whether it is ready, and which one would be picked
   --once             one tick (tend PRs, then at most one issue), then exit
+  --worker           only implement issues; leave PR tending to the one normal loop
   --max-issues N     stop after N issues (default: no limit)
   --poll SECONDS     wait between checks when nothing is ready (default 600)
   --budget USD       spending cap per Claude session (default 15)
@@ -62,6 +71,7 @@ while [ $# -gt 0 ]; do
     --preflight) PREFLIGHT_ONLY=true ;;
     --dry-run) DRY_RUN=true ;;
     --once) ONCE=true ;;
+    --worker) WORKER=true ;;
     --max-issues) MAX_ISSUES="${2:?--max-issues needs a number}"; shift ;;
     --poll) POLL="${2:?--poll needs seconds}"; shift ;;
     --budget) BUDGET="${2:?--budget needs an amount}"; shift ;;
@@ -74,6 +84,92 @@ done
 
 log() { printf '[%s] %s\n' "$(date +%H:%M:%S)" "$*"; }
 die() { log "ERROR: $*" >&2; exit 1; }
+
+# --- locks -----------------------------------------------------------------
+# Mutexes between loops on this machine: a lock is a file holding its owner's
+# pid, created with bash's noclobber (O_EXCL). Not mkdir: uutils coreutils
+# (Ubuntu 26.04's default) lets several racing `mkdir`s of one new directory
+# all succeed. Not flock: macOS lacks it. A lock whose owner died is taken over.
+
+lock_file() { echo "$STATE_DIR/locks/$1.lock"; }
+
+# Creates <file> holding this loop's pid; fails if it already exists.
+create_exclusive() { (set -C && echo "$$" >"$1") 2>/dev/null; }
+
+older_than_a_minute() { [ -n "$(find "$1" -maxdepth 0 -mmin +1 2>/dev/null)" ]; }
+
+# True when <file>'s owner died: its pid is gone, or the file is still empty
+# after a minute (the owner died between creating it and writing the pid).
+lock_is_stale() { # <file>
+  local pid
+  pid="$(cat "$1" 2>/dev/null || true)"
+  if [ -n "$pid" ]; then
+    ! kill -0 "$pid" 2>/dev/null
+  else
+    [ -e "$1" ] && older_than_a_minute "$1"
+  fi
+}
+
+# Removes <file> if its owner died. Only one loop reaps at a time, and it checks
+# again once it holds the reap lock. Without that, a loop that saw the dead
+# owner could delete the lock a live loop has taken since.
+reap_stale_lock() { # <file>
+  local reap="$1.reap"
+  if ! create_exclusive "$reap"; then
+    # A reaper that died leaves its file behind; reaping takes milliseconds.
+    if older_than_a_minute "$reap"; then rm -f "$reap"; fi
+    return 0
+  fi
+  if lock_is_stale "$1"; then rm -f "$1"; fi
+  rm -f "$reap"
+}
+
+lock_acquire() { # <name>
+  local file pid waited=0
+  file="$(lock_file "$1")"
+  mkdir -p "$STATE_DIR/locks"
+  until create_exclusive "$file"; do
+    if lock_is_stale "$file"; then
+      reap_stale_lock "$file"
+      continue
+    fi
+    if [ "$waited" -ge "$LOCK_WAIT" ]; then
+      pid="$(cat "$file" 2>/dev/null || true)"
+      log "  gave up waiting for the $1 lock (held by pid ${pid:-?})" >&2
+      return 1
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+}
+
+lock_release() { # <name>
+  local file
+  file="$(lock_file "$1")"
+  if [ "$(cat "$file" 2>/dev/null || true)" = "$$" ]; then rm -f "$file"; fi
+}
+
+release_my_locks() {
+  local file
+  for file in "$STATE_DIR"/locks/*.lock; do
+    [ -e "$file" ] || continue
+    if [ "$(cat "$file" 2>/dev/null || true)" = "$$" ]; then rm -f "$file"; fi
+  done
+}
+
+with_lock() { # <name> <command...>
+  local name="$1" status=0
+  shift
+  lock_acquire "$name" || return 1
+  "$@" || status=$?
+  lock_release "$name"
+  return "$status"
+}
+
+# Fetching, adding or removing worktrees, pushing (-u writes .git/config) and
+# rewriting commits all write shared files in the common .git directory, so
+# loops take turns.
+git_locked() { with_lock git git "$@"; }
 
 # --- toolchain -------------------------------------------------------------
 
@@ -96,8 +192,10 @@ setup_toolchain() {
   # when only corepack is installed.
   if ! command -v pnpm >/dev/null 2>&1 && command -v corepack >/dev/null 2>&1; then
     mkdir -p "$STATE_DIR/bin"
-    printf '#!/usr/bin/env bash\nexec corepack pnpm "$@"\n' >"$STATE_DIR/bin/pnpm"
-    chmod +x "$STATE_DIR/bin/pnpm"
+    # Write then rename: another loop may be running the shim right now.
+    printf '#!/usr/bin/env bash\nexec corepack pnpm "$@"\n' >"$STATE_DIR/bin/pnpm.$$"
+    chmod +x "$STATE_DIR/bin/pnpm.$$"
+    mv -f "$STATE_DIR/bin/pnpm.$$" "$STATE_DIR/bin/pnpm"
     export PATH="$STATE_DIR/bin:$PATH"
   fi
   # Agent work never touches the real-data database (CLAUDE.md "Commands").
@@ -183,7 +281,21 @@ issue_table() {
     ] | map(tostring) | join("\u001f")') | sort -n
 }
 
-pick_issue() { issue_table | awk -F'\t' '$2 == "ready" { print $1; exit }'; }
+# Claims the lowest ready issue with agent:wip and prints its number, or prints
+# nothing. The claim lock makes "read labels, then label" atomic between loops
+# on this machine. Loops on two machines are not covered: run on one machine.
+claim_issue() {
+  local n
+  lock_acquire claim || return 0
+  for n in $(issue_table | awk -F'\t' '$2 == "ready" { print $1 }'); do
+    if [ -z "$(issue_agent_labels "$n")" ] && add_label "$n" "$LABEL_WIP"; then
+      lock_release claim
+      echo "$n"
+      return 0
+    fi
+  done
+  lock_release claim
+}
 
 # --- worktrees -------------------------------------------------------------
 
@@ -202,19 +314,23 @@ branch_for() { # <issue> <title>
   if [ -n "$existing" ]; then echo "${existing#origin/}"; else echo "feat/$1-$(slugify "$2")"; fi
 }
 
+fetch_and_add_worktree() { # <worktree> <branch>  (run under the git lock)
+  local wt="$1" branch="$2"
+  git -C "$REPO_ROOT" fetch --quiet --prune origin || return 1
+  [ -d "$wt" ] && return 0
+  if git -C "$REPO_ROOT" show-ref --verify --quiet "refs/heads/$branch"; then
+    git -C "$REPO_ROOT" worktree add --quiet "$wt" "$branch"
+  elif git -C "$REPO_ROOT" show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+    git -C "$REPO_ROOT" worktree add --quiet -b "$branch" "$wt" "origin/$branch"
+  else
+    git -C "$REPO_ROOT" worktree add --quiet -b "$branch" "$wt" origin/main
+  fi
+}
+
 setup_worktree() { # <issue> <branch>
   local n="$1" branch="$2" wt
   wt="$(worktree_for "$n")"
-  git -C "$REPO_ROOT" fetch --quiet --prune origin || return 1
-  if [ ! -d "$wt" ]; then
-    if git -C "$REPO_ROOT" show-ref --verify --quiet "refs/heads/$branch"; then
-      git -C "$REPO_ROOT" worktree add --quiet "$wt" "$branch" || return 1
-    elif git -C "$REPO_ROOT" show-ref --verify --quiet "refs/remotes/origin/$branch"; then
-      git -C "$REPO_ROOT" worktree add --quiet -b "$branch" "$wt" "origin/$branch" || return 1
-    else
-      git -C "$REPO_ROOT" worktree add --quiet -b "$branch" "$wt" origin/main || return 1
-    fi
-  fi
+  with_lock git fetch_and_add_worktree "$wt" "$branch" || return 1
   mkdir -p "$wt/.loop"
   if ! (cd "$wt" && pnpm install --frozen-lockfile) >"$wt/.loop/install.log" 2>&1; then
     log "  pnpm install failed; see $wt/.loop/install.log"
@@ -298,7 +414,8 @@ scrub_attribution() { # <worktree> <base> <branch>
   local wt="$1" base="$2" branch="$3"
   if git -C "$wt" log --format=%B "$base..$branch" | grep -Eiq "$ATTRIBUTION_RE"; then
     log "  removing Claude attribution from commit messages"
-    (cd "$wt" && FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f \
+    # filter-branch keeps refs/original in the shared .git: take the git lock.
+    (cd "$wt" && FILTER_BRANCH_SQUELCH_WARNING=1 git_locked filter-branch -f \
       --msg-filter "grep -Eiv '$ATTRIBUTION_RE' || true" -- "$base..$branch") >/dev/null 2>&1 ||
       log "  could not rewrite commit messages; check them before merging"
   fi
@@ -338,7 +455,7 @@ open_pr() { # <issue> <branch> <worktree> <draft:true|false> [stuck reason]
     printf '\nCloses #%s\n' "$n"
   } >"$body"
 
-  git -C "$wt" push --quiet -u origin "$branch" || return 1
+  git_locked -C "$wt" push --quiet -u origin "$branch" || return 1
   existing="$(gh pr list --repo "$REPO" --head "$branch" --state open --json number --jq '.[0].number // ""')"
   if [ -n "$existing" ]; then
     log "  pushed to existing PR #$existing"
@@ -364,13 +481,8 @@ mark_stuck() { # <issue> <branch> <worktree> <reason>
 
 # --- one issue -------------------------------------------------------------
 
-work_issue() { # <issue>
+work_issue() { # <issue>, already labelled agent:wip by claim_issue
   local n="$1" title branch wt round verdict=""
-  if [ -n "$(issue_agent_labels "$n")" ]; then
-    log "#$n was claimed meanwhile; skipping"
-    return 0
-  fi
-  add_label "$n" "$LABEL_WIP" || return 1
   CURRENT_ISSUE="$n"
   title="$(gh issue view "$n" --repo "$REPO" --json title --jq .title)"
   branch="$(branch_for "$n" "$title")"
@@ -448,8 +560,8 @@ cleanup_finished() {
       wt="$(worktree_for "$n")"
       [ -d "$wt" ] || continue
       log "PR #$pr is $state; removing its worktree"
-      git -C "$REPO_ROOT" worktree remove --force "$wt" || true
-      git -C "$REPO_ROOT" branch -D "$branch" >/dev/null 2>&1 || true
+      git_locked -C "$REPO_ROOT" worktree remove --force "$wt" || true
+      git_locked -C "$REPO_ROOT" branch -D "$branch" >/dev/null 2>&1 || true
       rm -f "$STATE_DIR/pr-$pr".*
       if [ "$state" = CLOSED ] && [ "$label" = "$LABEL_PR" ]; then
         remove_label "$n" "$LABEL_PR"
@@ -535,7 +647,7 @@ tend_pr() { # <pr> <branch>
       log "  gate failed after the fix; not pushing"
       return 1
     fi
-    git -C "$wt" push --quiet origin "$branch" || return 1
+    git_locked -C "$wt" push --quiet origin "$branch" || return 1
     log "  pushed fix to PR #$pr"
   fi
   if [ -n "$newest" ]; then echo "$newest" >"$STATE_DIR/pr-$pr.seen"; fi
@@ -570,6 +682,7 @@ on_interrupt() {
     log "interrupted; releasing #$CURRENT_ISSUE (worktree kept, the next run resumes it)"
     remove_label "$CURRENT_ISSUE" "$LABEL_WIP"
   fi
+  release_my_locks
   exit 130
 }
 
@@ -594,10 +707,15 @@ main() {
   grep -qxF '.loop/' "$exclude" 2>/dev/null || echo '.loop/' >>"$exclude"
 
   trap on_interrupt INT TERM
-  log "agent loop on $REPO (budget \$$BUDGET per session; Ctrl+C to stop)"
+  trap release_my_locks EXIT
+  if $WORKER; then
+    log "agent loop WORKER (pid $$) on $REPO: implements only, no PR tending (budget \$$BUDGET per session; Ctrl+C to stop)"
+  else
+    log "agent loop on $REPO (budget \$$BUDGET per session; Ctrl+C to stop)"
+  fi
   while true; do
-    tend_prs
-    n="$(pick_issue)"
+    if ! $WORKER; then tend_prs; fi
+    n="$(claim_issue)"
     if [ -z "$n" ]; then
       if $ONCE; then
         log "nothing ready"
