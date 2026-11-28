@@ -130,5 +130,60 @@
       "tickerInvalid": "Use um ticker da B3, como PETR4 ou HGLG11.",
       "typeConflict": "{key} já está no catálogo como {type}."
     }
+  },
+  "ledger": {
+    "title": "Posições",
+    "description": "Quantidade, preço médio e custo total de cada ativo, calculados a partir das compras registradas.",
+    "empty": {
+      "title": "Nenhuma posição ainda",
+      "description": "Registre sua primeira compra abaixo para ver a posição e o preço médio."
+    },
+    "consolidated": {
+      "title": "Consolidado",
+      "description": "Cada ativo somado entre todas as contas."
+    },
+    "byAccount": {
+      "title": "Por conta"
+    },
+    "list": {
+      "asset": "Ativo",
+      "quantity": "Quantidade",
+      "averagePrice": "Preço médio",
+      "totalCost": "Custo total"
+    },
+    "buy": {
+      "title": "Registrar compra",
+      "description": "As taxas entram no custo e no preço médio.",
+      "accountId": "Conta",
+      "accountPlaceholder": "Selecione a conta",
+      "assetId": "Ativo",
+      "assetPlaceholder": "Selecione o ativo",
+      "date": "Data da compra",
+      "quantity": "Quantidade",
+      "quantityPlaceholder": "Ex.: 100",
+      "unitPrice": "Preço unitário",
+      "unitPricePlaceholder": "Ex.: 30,00",
+      "fees": "Taxas",
+      "feesPlaceholder": "Ex.: 5,00 (opcional)",
+      "submit": "Registrar compra",
+      "submitting": "Registrando…",
+      "success": "Compra registrada.",
+      "needsAccount": "Cadastre uma conta antes de registrar compras.",
+      "goToAccounts": "Ir para Contas",
+      "needsAsset": "Adicione um ativo ao catálogo antes de registrar compras.",
+      "goToCatalog": "Ir para Ativos"
+    },
+    "errors": {
+      "required": "Campo obrigatório.",
+      "invalid": "Valor inválido. Use só números, com vírgula ou ponto nas casas decimais.",
+      "invalidChoice": "Selecione uma opção válida.",
+      "invalidDate": "Informe uma data válida.",
+      "notFound": "Selecione uma opção válida.",
+      "notPositive": "Informe um valor maior que zero.",
+      "negative": "O valor não pode ser negativo.",
+      "future": "A data não pode estar no futuro.",
+      "tooPrecise": "Use no máximo {max} casas decimais.",
+      "tooLarge": "Valor grande demais."
+    }
   }
 }
